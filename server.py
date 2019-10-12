@@ -69,17 +69,17 @@ while True:
     header = data[:8]
     reply = "Server_Reply: " + str(len(data)) + " characters received"
     mysocket.sendto(reply.encode(), addr)
-    print("Message["+addr[0]+"] - "+data[8:].decode().strip())
+    # print("Message["+addr[0]+"] - "+data[8:].decode().strip())
     received_file += data[8:]
-    print(received_file.decode())
+    # print(received_file.decode())
     (msg_type, data_length, frag_index, frag_count) = struct.unpack('BHHH', header)
-    print(msg_type, data_length, frag_index, frag_count)
+    # print(msg_type, data_length, frag_index, frag_count)
     received_frag += 1
     if received_frag == frag_count:
         print("All data received")
         break
 if msg_type == 1:
-    write_file = open('/home/nicolas/PycharmProjects/pks_zadanie1/received.txt', 'wb')
+    write_file = open('/home/nicolas/PycharmProjects/pks_zadanie1/icon_copy.ico', 'wb')
     write_file.write(received_file)
     write_file.close()
 mysocket.close()

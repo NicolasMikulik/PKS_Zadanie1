@@ -32,10 +32,10 @@ def mod2div(divident, divisor):
     return checkword
 
 
-def encode_data(client_data, key):
-    l_key = len(key)
+def encode_data(client_data, client_key):
+    l_key = len(client_key)
     appended_data = client_data + '0' * (l_key - 1)
-    remainder = mod2div(appended_data, key)
+    remainder = mod2div(appended_data, client_key)
     codeword = client_data + remainder
     return codeword
 
@@ -50,7 +50,7 @@ try:
 except socket.error:
     print("Failed to create socket")
     exit()
-read_file = "/home/nicolas/PycharmProjects/Coursera Assignments/romeo.txt"
+read_file = "/home/nicolas/Pictures/icon.ico"
 server_address = ('localhost', 8484)
 print(str(sys.getsizeof(server_address)))
 msg_type = 1
@@ -70,7 +70,12 @@ while contents:
     data = bytearray()
     data.extend(contents[:frag_size])
     data_length = len(data)
-    crc = encode_data(data, key)
+    data_as_string = bin(int(binascii.hexlify(data), 16))
+    data_as_string = data_as_string[2:]
+    # print(bin(int(binascii.hexlify(data), 16)))
+    crc = encode_data(data_as_string, key)
+    print(crc[-3:])
+    # print(binascii.hexlify(data))
     frag_index += 1
     header = struct.pack('BHHH', msg_type, data_length, frag_index, frag_count)
     mysocket.sendto(header + bytearray(data), server_address)
