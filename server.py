@@ -76,11 +76,12 @@ while True:
     if len(crcstr) < (len(key) - 1):
         crcstr = '0'*((len(key)-1) - len(crcstr)) + crcstr
     # print(crcstr, "{0:b}".format(crc))
-    data_as_string = bin(int(binascii.hexlify(data), 16))
+    data_as_string = bin(int(binascii.hexlify(data[struct_header_size:]), 16))
     data_as_string = data_as_string[2:] + crcstr
     crccheck = decode_data(data_as_string, key)
     print(crcstr, "{0:b}".format(crc), crccheck, data_as_string[:-3])
-    if(crccheck == "000"):
+    temp = "0" * (len(key) - 1)
+    if(crccheck == temp):
         print("Correct crc")
     received_frag += 1
     if received_frag == frag_count:
