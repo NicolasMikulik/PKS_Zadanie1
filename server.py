@@ -1,6 +1,7 @@
 import socket
 import sys
 from struct import *
+import binascii
 
 
 def xor(a, b):
@@ -30,14 +31,13 @@ def mod2div(divident, divisor):
     return checkword
 
 
-def encode_data(server_data, key):
-    l_key = len(key)
+def decode_data(server_data, server_key):
+    l_key = len(server_key)
     appended_data = server_data + '0' * (l_key - 1)
-    remainder = mod2div(appended_data, key)
-    codeword = server_data + remainder
-    return codeword
+    remainder = mod2div(appended_data, server_key)
+    return remainder
 
-# Create a UDP socket
+
 import struct
 try:
     mysocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -62,24 +62,37 @@ fragSize = int(fragSize_msg[0].decode())
 received_file = bytearray()
 print("Client set fragment size to: "+str(fragSize))
 received_frag = 0
+received_list = list()
 while True:
     dataStream = mysocket.recvfrom(fragSize+struct_header_size+address_size)
     data = dataStream[0]
     addr = dataStream[1]
-    header = data[:10]
+    header = data[:struct_header_size]
     reply = "Server_Reply: " + str(len(data)) + " characters received"
     mysocket.sendto(reply.encode(), addr)
-    # print("Message["+addr[0]+"] - "+data[8:].decode().strip())
-    received_file += data[10:]
-    # print(received_file.decode())
+    # received_file += data[struct_header_size:]
     (msg_type, data_length, frag_index, frag_count, crc) = struct.unpack('BHHHH', header)
-    # print(msg_type, data_length, frag_index, frag_count)
+    crcstr = "{0:b}".format(crc)
+    if len(crcstr) < (len(key) - 1):
+        crcstr = '0'*((len(key)-1) - len(crcstr)) + crcstr
+    # print(crcstr, "{0:b}".format(crc))
+    data_as_string = bin(int(binascii.hexlify(data), 16))
+    data_as_string = data_as_string + crcstr
+    crccheck = decode_data(data_as_string, key)
+    print(crcstr, "{0:b}".format(crc), crccheck, data_as_string)
+    if(crccheck == "000"):
+        print("Correct crc")
+    print(frag_index)
     received_frag += 1
     if received_frag == frag_count:
         print("All data received")
         break
+    received_list.append(b'')
+    received_list[frag_index-1] = data[struct_header_size:]
 if msg_type == 1:
+    received_file = b''.join(received_list)
     write_file = open('/home/nicolas/PycharmProjects/pks_zadanie1/icon_copy.ico', 'wb')
     write_file.write(received_file)
     write_file.close()
+    print("Received file saved in location /home/nicolas/PycharmProjects/pks_zadanie1/icon_copy.ico")
 mysocket.close()

@@ -71,11 +71,10 @@ while contents:
     data.extend(contents[:frag_size])
     data_length = len(data)
     data_as_string = bin(int(binascii.hexlify(data), 16))
-    data_as_string = data_as_string[2:]
     # print(bin(int(binascii.hexlify(data), 16)))
-    crcstr = encode_data(data_as_string, key)
-    crc = int(crcstr[-3:], 2)
-    print(crcstr[-3:], crc)
+    crcstr = encode_data(data_as_string[2:], key)
+    crc = int(crcstr[-(len(key)-1):], 2)
+    print(crcstr[-(len(key)-1):], crc)
     frag_index += 1
     header = struct.pack('BHHHH', msg_type, data_length, frag_index, frag_count, crc)
     mysocket.sendto(header + bytearray(data), server_address)
