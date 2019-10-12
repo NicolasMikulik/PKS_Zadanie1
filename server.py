@@ -20,7 +20,7 @@ def mod2div(divident, divisor):
     while pick < len(divident):
         if tmp[0] == '1':
             tmp = xor(divisor, tmp) + divident[pick]
-        else:
+        else:  # If leftmost bit is '0'
             tmp = xor('0' * pick, tmp) + divident[pick]
         pick += 1
     if tmp[0] == '1':
@@ -31,10 +31,10 @@ def mod2div(divident, divisor):
     return checkword
 
 
-def decode_data(server_data, server_key):
-    l_key = len(server_key)
-    appended_data = server_data + '0' * (l_key - 1)
-    remainder = mod2div(appended_data, server_key)
+def decode_data(data, key):
+    l_key = len(key)
+    appended_data = data + '0' * (l_key - 1)
+    remainder = mod2div(appended_data, key)
     return remainder
 
 
@@ -77,12 +77,11 @@ while True:
         crcstr = '0'*((len(key)-1) - len(crcstr)) + crcstr
     # print(crcstr, "{0:b}".format(crc))
     data_as_string = bin(int(binascii.hexlify(data), 16))
-    data_as_string = data_as_string + crcstr
+    data_as_string = data_as_string[2:] + crcstr
     crccheck = decode_data(data_as_string, key)
-    print(crcstr, "{0:b}".format(crc), crccheck, data_as_string)
+    print(crcstr, "{0:b}".format(crc), crccheck, data_as_string[:-3])
     if(crccheck == "000"):
         print("Correct crc")
-    print(frag_index)
     received_frag += 1
     if received_frag == frag_count:
         print("All data received")

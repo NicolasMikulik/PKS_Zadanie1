@@ -74,7 +74,7 @@ while contents:
     # print(bin(int(binascii.hexlify(data), 16)))
     crcstr = encode_data(data_as_string[2:], key)
     crc = int(crcstr[-(len(key)-1):], 2)
-    print(crcstr[-(len(key)-1):], crc)
+    print(crcstr[-(len(key)-1):], crc, data_as_string[2:])
     frag_index += 1
     header = struct.pack('BHHHH', msg_type, data_length, frag_index, frag_count, crc)
     mysocket.sendto(header + bytearray(data), server_address)
