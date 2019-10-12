@@ -2,6 +2,12 @@ import socket
 import sys
 from struct import *
 import binascii
+# Zdroj funkcii xor(a, b), mod2div(divident, divisor) a decode_data(data, key) pre CRC:
+# https://www.geeksforgeeks.org/cyclic-redundancy-check-python/
+# Princip komunikacie servera a klienta:
+# https://www.binarytides.com/programming-udp-sockets-in-python/?fbclid=IwAR2-JPM5O9EhroW-5WsBSzu-53NFYfqN54WqKIA8WcrJEWKmmX8gZrBo-4Y
+# UDP s umiestnovanim datagramov do pola podla indexu datagramu:
+# https://stackoverflow.com/questions/40325616/sending-file-over-udp-divided-into-fragments?noredirect=1&lq=1
 
 
 def xor(a, b):
