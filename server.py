@@ -53,7 +53,7 @@ except socket.error:
     print("Failed to bind socket")
 
 key = "1001"
-struct_header_size = calcsize('BHHH')
+struct_header_size = calcsize('BHHHH')
 address_size = sys.getsizeof(server_address)
 save_path = "/home/nicolas/PycharmProjects/pks_zadanie1"
 fragSize_msg = mysocket.recvfrom(512)
@@ -66,13 +66,13 @@ while True:
     dataStream = mysocket.recvfrom(fragSize+struct_header_size+address_size)
     data = dataStream[0]
     addr = dataStream[1]
-    header = data[:8]
+    header = data[:10]
     reply = "Server_Reply: " + str(len(data)) + " characters received"
     mysocket.sendto(reply.encode(), addr)
     # print("Message["+addr[0]+"] - "+data[8:].decode().strip())
-    received_file += data[8:]
+    received_file += data[10:]
     # print(received_file.decode())
-    (msg_type, data_length, frag_index, frag_count) = struct.unpack('BHHH', header)
+    (msg_type, data_length, frag_index, frag_count, crc) = struct.unpack('BHHHH', header)
     # print(msg_type, data_length, frag_index, frag_count)
     received_frag += 1
     if received_frag == frag_count:
