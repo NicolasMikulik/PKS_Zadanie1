@@ -51,6 +51,19 @@ def encode_data(client_data, client_key):
     codeword = client_data + remainder
     return codeword
 
+def construct_reply(re_msg_type, re_data_length, re_frag_count, re_frag_index):
+    reply_msg_type = re_msg_type
+    reply_data_length = re_data_length
+    reply_frag_count = re_frag_count
+    reply_frag_index = re_frag_index
+    reply_string = str(reply_msg_type) + str(reply_data_length) + str(reply_frag_count) + str(reply_frag_index)
+    reply_string = "{0:b}".format(int(reply_string))
+    print(reply_string)
+    reply_crc = encode_data(reply_string, key)
+    reply_crc = int(reply_crc[-(len(key) - 1):], 2)
+    print(reply_crc)
+    return struct.pack('BBBHH', reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc)
+
 
 import struct
 try:
@@ -107,7 +120,8 @@ while True:
         reply_crc = encode_data(reply_string, key)
         reply_crc = int(reply_crc[-(len(key) - 1):], 2)
         print(reply_crc)
-        reply_header = struct.pack('BBBHH', reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc)
+        # reply_header = struct.pack('BBBHH', reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc)
+        reply_header = construct_reply(4, 1, 1, 1)
         mysocket.sendto(reply_header, addr)
     else:
         print("---Incorrect crc---")
@@ -121,7 +135,8 @@ while True:
         print(reply_string)
         reply_crc = encode_data(reply_string, key)
         reply_crc = int(reply_crc[-(len(key) - 1):], 2)
-        reply_header = struct.pack('BBBHH', reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc)
+        # reply_header = struct.pack('BBBHH', reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc)
+        reply_header = construct_reply(4, 0, 1, frag_index)
         mysocket.sendto(reply_header, addr)
     received_frag += 1
     if received_frag == frag_count:
