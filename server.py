@@ -61,10 +61,8 @@ def construct_reply(re_msg_type, re_data_length, re_frag_count, re_frag_index):
     reply_frag_index = re_frag_index
     reply_string = str(reply_msg_type) + str(reply_data_length) + str(reply_frag_count) + str(reply_frag_index)
     reply_string = "{0:b}".format(int(reply_string))
-    print(reply_string)
     reply_crc = encode_data(reply_string, key)
     reply_crc = int(reply_crc[-(len(key) - 1):], 2)
-    print(reply_crc)
     return struct.pack('BBBHH', reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc)
 
 
@@ -105,19 +103,17 @@ while True:
     crcstr = "{0:b}".format(crc)
     if len(crcstr) < (len(key) - 1):
         crcstr = '0' * ((len(key) - 1) - len(crcstr)) + crcstr
-    # print(crcstr, "{0:b}".format(crc))
     data_as_string = bin(int(binascii.hexlify(data[struct_header_size:]), 16))
     data_as_string = data_as_string[2:] + crcstr
     crccheck = decode_data(data_as_string, key)
-    # print(crcstr, "{0:b}".format(crc), crccheck, data_as_string[:-3])
     temp = "0" * (len(key) - 1)
     if crccheck == temp:
-        print("Correct crc")
+        print("Datagram nr. "+str(frag_index)+": correct crc")
         reply_header = construct_reply(4, 1, 1, 1)
         mysocket.sendto(reply_header, addr)
         received_list[frag_index - 1] = data[struct_header_size:]
     else:
-        print("---Incorrect crc---")
+        print("---Datagram nr. "+str(frag_index)+": INCORRECT crc---")
         reply_header = construct_reply(4, 0, 1, frag_index)
         corrupted_list.append(frag_index)
         mysocket.sendto(reply_header, addr)
@@ -126,12 +122,14 @@ while True:
         print("All data received")
         break
 # corrupted_list.remove(corrupted_list[0])
-print(len(corrupted_list))
+corr_received_file = b''.join(received_list)
+corr_write_file = open('/home/nicolas/PycharmProjects/pks_zadanie1/icon_corrupted_copy.ico', 'wb')
+corr_write_file.write(received_file)
+corr_write_file.close()
+print("Number of corrupted datagrams ", len(corrupted_list))
 if len(corrupted_list) != 0:
     while len(corrupted_list) > 0:
-        print(len(corrupted_list))
         requested_index = corrupted_list[0]
-        print("5 0 1",requested_index)
         reply_header = construct_reply(5, 0, 1, corrupted_list.pop(0))
         mysocket.sendto(reply_header, addr)
 
@@ -147,12 +145,12 @@ if len(corrupted_list) != 0:
         crccheck = decode_data(data_as_string, key)
         temp = "0" * (len(key) - 1)
         if crccheck == temp:
-            print("Correct crc of requested dgram")
+            print("Correct crc of requested datagram.")
             received_list[frag_index - 1] = data[struct_header_size:]
             reply_header = construct_reply(4, 1, 1, 1)
             mysocket.sendto(reply_header, addr)
         else:
-            print("---Incorrect crc of requested dgram---")
+            print("---Incorrect crc of requested datagram, requesting the datagram again...---")
             corrupted_list.append(requested_index)
             reply_header = construct_reply(4, 0, 1, frag_index)
             mysocket.sendto(reply_header, addr)
@@ -161,7 +159,7 @@ else:
     mysocket.sendto(reply_header, addr)
 if msg_type == 1:
     received_file = b''.join(received_list)
-    write_file = open('/home/nicolas/PycharmProjects/pks_zadanie1/icon_copy.ico', 'wb')
+    write_file = open('/home/nicolas/PycharmProjects/pks_zadanie1/icon_copy12.ico', 'wb')
     write_file.write(received_file)
     write_file.close()
     print("Received file saved in location /home/nicolas/PycharmProjects/pks_zadanie1/icon_copy.ico")
