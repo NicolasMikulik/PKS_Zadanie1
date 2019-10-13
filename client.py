@@ -106,12 +106,16 @@ while contents:
         reply_crcstr = '0' * ((len(key) - 1) - len(reply_crcstr)) + reply_crcstr
     # print(frag_index, reply_crcstr)
     reply_string = str(reply_msg_type) + str(reply_data_length) + str(reply_frag_count) + str(reply_frag_index)
-    reply_string = (bin(int(reply_string, 16)))[2:] + reply_crcstr
+    reply_string = "{0:b}".format(int(reply_string)) + reply_crcstr
     # print(reply_string)
     reply_check = decode_data(reply_string, key)
     temp = "0" * (len(key) - 1)
     if(reply_check == temp):
-        print("Successfully obtained server response")
-    # print(reply_msg_type)
+        notification = "Server response: "
+        if(reply_data_length == 1):
+            notification += "datagram nr. " + str(frag_index) + " arrived successfully."
+        else:
+            notification += "datagram nr. " + str(frag_index) + " arrived corrupted and will be resent after delivery of other datagrams."
+    print(notification)
     contents = contents[frag_size:]
 mysocket.close()
