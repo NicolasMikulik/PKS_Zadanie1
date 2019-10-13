@@ -97,20 +97,21 @@ while contents:
     mysocket.sendto(header + bytearray(data), server_address)
     # print("Datagram sent, awaiting response from server...")
 
-    dataStream = mysocket.recvfrom(address_size+reply_header_size) # receives only header
+    dataStream = mysocket.recvfrom(address_size+reply_header_size+10) # receives only header
     reply_data = dataStream[0]
     (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BBBHH', reply_data)
+    print(reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc)
     reply_crcstr = "{0:b}".format(reply_crc)
     if len(reply_crcstr) < (len(key)-1):
         reply_crcstr = '0' * ((len(key) - 1) - len(reply_crcstr)) + reply_crcstr
-    print(frag_index, reply_crcstr)
+    # print(frag_index, reply_crcstr)
     reply_string = str(reply_msg_type) + str(reply_data_length) + str(reply_frag_count) + str(reply_frag_index)
     reply_string = (bin(int(reply_string, 16)))[2:] + reply_crcstr
-    #print(reply_string)
+    # print(reply_string)
     reply_check = decode_data(reply_string, key)
     temp = "0" * (len(key) - 1)
     if(reply_check == temp):
         print("Successfully obtained server response")
-    print(reply_msg_type)
+    # print(reply_msg_type)
     contents = contents[frag_size:]
 mysocket.close()

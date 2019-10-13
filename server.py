@@ -102,10 +102,12 @@ while True:
         reply_frag_count = 1
         reply_frag_index = 1
         reply_string = str(reply_msg_type) + str(reply_data_length) + str(reply_frag_count) + str(reply_frag_index)
-        reply_crc = encode_data((bin(int(reply_string, 16)))[2:], key)
-        print(reply_crc)
+        reply_string = "{0:b}".format(int(reply_string))
+        print(reply_string)
+        reply_crc = encode_data(reply_string, key)
         reply_crc = int(reply_crc[-(len(key) - 1):], 2)
-        reply_header = struct.pack('BBBHH', reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, crc)
+        print(reply_crc)
+        reply_header = struct.pack('BBBHH', reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc)
         mysocket.sendto(reply_header, addr)
     else:
         print("---Incorrect crc---")
@@ -117,7 +119,7 @@ while True:
         reply_string = str(reply_msg_type) + str(reply_data_length) + str(reply_frag_count) + str(reply_frag_index)
         reply_crc = encode_data((bin(int(reply_string, 16)))[2:], key)
         reply_crc = int(reply_crc[-(len(key) - 1):], 2)
-        reply_header = struct.pack('BBBHH', reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, crc)
+        reply_header = struct.pack('BBBHH', reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc)
         mysocket.sendto(reply_header, addr)
     received_frag += 1
     if received_frag == frag_count:
