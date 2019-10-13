@@ -77,6 +77,7 @@ received_file = bytearray()
 print("Client set fragment size to: "+str(fragSize))
 received_frag = 0
 received_list = list()
+corrupted_list = list()
 while True:
     dataStream = mysocket.recvfrom(fragSize+struct_header_size+address_size)
     data = dataStream[0]
@@ -91,27 +92,33 @@ while True:
     data_as_string = bin(int(binascii.hexlify(data[struct_header_size:]), 16))
     data_as_string = data_as_string[2:] + crcstr
     crccheck = decode_data(data_as_string, key)
-    print(crcstr, "{0:b}".format(crc), crccheck, data_as_string[:-3])
+    # print(crcstr, "{0:b}".format(crc), crccheck, data_as_string[:-3])
     temp = "0" * (len(key) - 1)
     if crccheck == temp:
         print("Correct crc")
         # reply = "Server_Reply: " + str(len(data[struct_header_size:])) + " bytes received successfully in datagram nr " + str(frag_index)
         reply_msg_type = 4
         reply_data_length = 1
-        reply_frag_index = 1
         reply_frag_count = 1
-        reply_string = str(reply_msg_type) + str(reply_data_length) + str(reply_frag_index) + str(reply_frag_count)
+        reply_frag_index = 1
+        reply_string = str(reply_msg_type) + str(reply_data_length) + str(reply_frag_count) + str(reply_frag_index)
         reply_crc = encode_data((bin(int(reply_string, 16)))[2:], key)
         print(reply_crc)
         reply_crc = int(reply_crc[-(len(key) - 1):], 2)
-        reply_header = struct.pack('BBBBH', reply_msg_type, reply_data_length, reply_frag_index, reply_frag_count, crc)
+        reply_header = struct.pack('BBBHH', reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, crc)
         mysocket.sendto(reply_header, addr)
     else:
         print("---Incorrect crc---")
-        reply = "Server_Reply: " + str(len(data[struct_header_size:])) + " bytes received UNSUCCESSFULLY in datagram" \
-                                                                         " nr " + str(frag_index)
-        print(len(reply))
-        mysocket.sendto(reply.encode(), addr)
+        corrupted_list.append(frag_index)
+        reply_msg_type = 4
+        reply_data_length = 0
+        reply_frag_count = 1
+        reply_frag_index = frag_index
+        reply_string = str(reply_msg_type) + str(reply_data_length) + str(reply_frag_count) + str(reply_frag_index)
+        reply_crc = encode_data((bin(int(reply_string, 16)))[2:], key)
+        reply_crc = int(reply_crc[-(len(key) - 1):], 2)
+        reply_header = struct.pack('BBBHH', reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, crc)
+        mysocket.sendto(reply_header, addr)
     received_frag += 1
     if received_frag == frag_count:
         print("All data received")

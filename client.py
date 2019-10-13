@@ -45,6 +45,11 @@ def encode_data(client_data, client_key):
     codeword = client_data + remainder
     return codeword
 
+def decode_data(data, key):
+    l_key = len(key)
+    appended_data = data + '0' * (l_key - 1)
+    remainder = mod2div(appended_data, key)
+    return remainder
 
 '''key = "1000001"
 valkey = "{:b}".format(int(key, 2))
@@ -58,7 +63,8 @@ except socket.error:
     exit()
 read_file = "/home/nicolas/Pictures/icon.ico"
 server_address = ('localhost', 8484)
-print(str(sys.getsizeof(server_address)))
+address_size = sys.getsizeof(server_address)  # print(str(sys.getsizeof(server_address)))
+reply_header_size = struct.calcsize('BBBHH')
 msg_type = 1
 data_length = 0
 frag_index = 0
@@ -72,6 +78,7 @@ file.close()
 file_size = len(contents)
 frag_count = math.ceil(file_size / int(frag_size))
 print("File of size " + str(file_size) + " is being sent in "+str(frag_count)+" datagrams")
+corrupted_list = list()
 while contents:
     data = bytearray()
     data.extend(contents[:frag_size])
@@ -88,11 +95,22 @@ while contents:
     frag_index += 1
     header = struct.pack('BHHHH', msg_type, data_length, frag_index, frag_count, crc)
     mysocket.sendto(header + bytearray(data), server_address)
-    print("test")
-    dataStream = mysocket.recvfrom(72+struct.calcsize('BBBBH'))
+    # print("Datagram sent, awaiting response from server...")
+
+    dataStream = mysocket.recvfrom(address_size+reply_header_size) # receives only header
     reply_data = dataStream[0]
-    print("test2")
-    (reply_msg_type, reply_data_length, reply_frag_index, reply_frag_count, crc) = struct.unpack('BBBBH', reply_data)
+    (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BBBHH', reply_data)
+    reply_crcstr = "{0:b}".format(reply_crc)
+    if len(reply_crcstr) < (len(key)-1):
+        reply_crcstr = '0' * ((len(key) - 1) - len(reply_crcstr)) + reply_crcstr
+    print(frag_index, reply_crcstr)
+    reply_string = str(reply_msg_type) + str(reply_data_length) + str(reply_frag_count) + str(reply_frag_index)
+    reply_string = (bin(int(reply_string, 16)))[2:] + reply_crcstr
+    #print(reply_string)
+    reply_check = decode_data(reply_string, key)
+    temp = "0" * (len(key) - 1)
+    if(reply_check == temp):
+        print("Successfully obtained server response")
     print(reply_msg_type)
     contents = contents[frag_size:]
 mysocket.close()
