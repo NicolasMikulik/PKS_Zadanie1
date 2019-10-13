@@ -44,6 +44,14 @@ def decode_data(data, key):
     return remainder
 
 
+def encode_data(client_data, client_key):
+    l_key = len(client_key)
+    appended_data = client_data + '0' * (l_key - 1)
+    remainder = mod2div(appended_data, client_key)
+    codeword = client_data + remainder
+    return codeword
+
+
 import struct
 try:
     mysocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -74,8 +82,6 @@ while True:
     data = dataStream[0]
     addr = dataStream[1]
     header = data[:struct_header_size]
-    reply = "Server_Reply: " + str(len(data)) + " characters received"
-    mysocket.sendto(reply.encode(), addr)
     # received_file += data[struct_header_size:]
     (msg_type, data_length, frag_index, frag_count, crc) = struct.unpack('BHHHH', header)
     crcstr = "{0:b}".format(crc)
@@ -87,8 +93,25 @@ while True:
     crccheck = decode_data(data_as_string, key)
     print(crcstr, "{0:b}".format(crc), crccheck, data_as_string[:-3])
     temp = "0" * (len(key) - 1)
-    if(crccheck == temp):
+    if crccheck == temp:
         print("Correct crc")
+        # reply = "Server_Reply: " + str(len(data[struct_header_size:])) + " bytes received successfully in datagram nr " + str(frag_index)
+        reply_msg_type = 4
+        reply_data_length = 1
+        reply_frag_index = 1
+        reply_frag_count = 1
+        reply_string = str(reply_msg_type) + str(reply_data_length) + str(reply_frag_index) + str(reply_frag_count)
+        reply_crc = encode_data((bin(int(reply_string, 16)))[2:], key)
+        print(reply_crc)
+        reply_crc = int(reply_crc[-(len(key) - 1):], 2)
+        reply_header = struct.pack('BBBBH', reply_msg_type, reply_data_length, reply_frag_index, reply_frag_count, crc)
+        mysocket.sendto(reply_header, addr)
+    else:
+        print("---Incorrect crc---")
+        reply = "Server_Reply: " + str(len(data[struct_header_size:])) + " bytes received UNSUCCESSFULLY in datagram" \
+                                                                         " nr " + str(frag_index)
+        print(len(reply))
+        mysocket.sendto(reply.encode(), addr)
     received_frag += 1
     if received_frag == frag_count:
         print("All data received")

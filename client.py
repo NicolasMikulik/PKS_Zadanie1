@@ -78,12 +78,21 @@ while contents:
     data_length = len(data)
     data_as_string = bin(int(binascii.hexlify(data), 16))
     # print(bin(int(binascii.hexlify(data), 16)))
-    crcstr = encode_data(data_as_string[2:], key)
-    crc = int(crcstr[-(len(key)-1):], 2)
+    if frag_index != frag_count - 2:
+        crcstr = encode_data(data_as_string[2:], key)
+        crc = int(crcstr[-(len(key)-1):], 2)
+    else:
+        crcstr = encode_data(data_as_string[4:], key)
+        crc = int(crcstr[-(len(key) - 1):], 2)
     print(crcstr[-(len(key)-1):], crc, data_as_string[2:])
     frag_index += 1
     header = struct.pack('BHHHH', msg_type, data_length, frag_index, frag_count, crc)
     mysocket.sendto(header + bytearray(data), server_address)
-    print(mysocket.recvfrom(512)[0].decode())
+    print("test")
+    dataStream = mysocket.recvfrom(72+struct.calcsize('BBBBH'))
+    reply_data = dataStream[0]
+    print("test2")
+    (reply_msg_type, reply_data_length, reply_frag_index, reply_frag_count, crc) = struct.unpack('BBBBH', reply_data)
+    print(reply_msg_type)
     contents = contents[frag_size:]
 mysocket.close()
