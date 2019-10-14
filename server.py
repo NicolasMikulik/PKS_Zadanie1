@@ -2,7 +2,7 @@ import socket
 import sys
 from struct import *
 import binascii
-
+import struct
 
 # Zdroj funkcii xor(a, b), mod2div(divident, divisor) a decode_data(data, key) pre CRC:
 # https://www.geeksforgeeks.org/cyclic-redundancy-check-python/
@@ -22,6 +22,7 @@ def xor(a, b):
     return ''.join(result)
 
 
+# koniec funkcii pre crc
 def mod2div(divident, divisor):
     pick = len(divisor)
     tmp = divident[0: pick]
@@ -52,9 +53,13 @@ def encode_data(client_data, client_key):
     remainder = mod2div(appended_data, client_key)
     codeword = client_data + remainder
     return codeword
+
+
 # koniec funkcii pre crc
 
-def construct_reply(re_msg_type, re_data_length, re_frag_count, re_frag_index):
+
+def construct_reply(re_msg_type, re_data_length, re_frag_count,
+                    re_frag_index):  # vlastna funkcia pre vytvorenie hlavicky
     reply_msg_type = re_msg_type
     reply_data_length = re_data_length
     reply_frag_count = re_frag_count
@@ -65,8 +70,6 @@ def construct_reply(re_msg_type, re_data_length, re_frag_count, re_frag_index):
     reply_crc = int(reply_crc[-(len(key) - 1):], 2)
     return struct.pack('BBBHH', reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc)
 
-
-import struct
 
 try:
     mysocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -108,12 +111,12 @@ while True:
     crccheck = decode_data(data_as_string, key)
     temp = "0" * (len(key) - 1)
     if crccheck == temp:
-        print("Datagram nr. "+str(frag_index)+": correct crc")
+        print("Datagram nr. " + str(frag_index) + ": correct crc")
         reply_header = construct_reply(4, 1, 1, 1)
         mysocket.sendto(reply_header, addr)
         received_list[frag_index - 1] = data[struct_header_size:]
     else:
-        print("---Datagram nr. "+str(frag_index)+": INCORRECT crc---")
+        print("---Datagram nr. " + str(frag_index) + ": INCORRECT crc---")
         reply_header = construct_reply(4, 0, 1, frag_index)
         corrupted_list.append(frag_index)
         mysocket.sendto(reply_header, addr)
