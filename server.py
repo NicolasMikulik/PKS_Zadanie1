@@ -60,15 +60,12 @@ def encode_data(client_data, client_key):
 
 def construct_reply(re_msg_type, re_data_length, re_frag_count,
                     re_frag_index):  # vlastna funkcia pre vytvorenie hlavicky
-    reply_msg_type = re_msg_type
-    reply_data_length = re_data_length
-    reply_frag_count = re_frag_count
-    reply_frag_index = re_frag_index
-    reply_string = str(reply_msg_type) + str(reply_data_length) + str(reply_frag_count) + str(reply_frag_index)
+
+    reply_string = str(re_msg_type) + str(re_data_length) + str(re_frag_count) + str(re_frag_index)
     reply_string = "{0:b}".format(int(reply_string))
     reply_crc = encode_data(reply_string, key)
     reply_crc = int(reply_crc[-(len(key) - 1):], 2)
-    return struct.pack('BBBHH', reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc)
+    return struct.pack('BHHHH', re_msg_type, re_data_length, re_frag_count, re_frag_index, reply_crc)
 
 
 try:
@@ -102,7 +99,7 @@ while True:
     addr = dataStream[1]
     header = data[:struct_header_size]
     received_list.append(b'')  # received_file += data[struct_header_size:]
-    (msg_type, data_length, frag_index, frag_count, crc) = struct.unpack('BHHHH', header)
+    (msg_type, data_length, frag_count, frag_index, crc) = struct.unpack('BHHHH', header)
     crcstr = "{0:b}".format(crc)
     if len(crcstr) < (len(key) - 1):
         crcstr = '0' * ((len(key) - 1) - len(crcstr)) + crcstr
