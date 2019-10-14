@@ -11,6 +11,7 @@ import binascii
 # https://stackoverflow.com/questions/40325616/sending-file-over-udp-divided-into-fragments?noredirect=1&lq=1
 
 
+# zaciatok funkcii pre crc zo zdroja https://www.geeksforgeeks.org/cyclic-redundancy-check-python/
 def xor(a, b):
     result = []
     for i in range(1, len(b)):
@@ -51,6 +52,7 @@ def decode_data(data, key):
     appended_data = data + '0' * (l_key - 1)
     remainder = mod2div(appended_data, key)
     return remainder
+# koniec funkcii pre crc
 
 
 def construct_reply(re_msg_type, re_data_length, re_frag_count, re_frag_index):

@@ -11,7 +11,7 @@ import binascii
 # UDP s umiestnovanim datagramov do pola podla indexu datagramu:
 # https://stackoverflow.com/questions/40325616/sending-file-over-udp-divided-into-fragments?noredirect=1&lq=1
 
-
+# zaciatok funkcii pre crc zo zdroja https://www.geeksforgeeks.org/cyclic-redundancy-check-python/
 def xor(a, b):
     result = []
     for i in range(1, len(b)):
@@ -52,7 +52,7 @@ def encode_data(client_data, client_key):
     remainder = mod2div(appended_data, client_key)
     codeword = client_data + remainder
     return codeword
-
+# koniec funkcii pre crc
 
 def construct_reply(re_msg_type, re_data_length, re_frag_count, re_frag_index):
     reply_msg_type = re_msg_type
