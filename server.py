@@ -163,4 +163,31 @@ if msg_type == 1:
     write_file.write(received_file)
     write_file.close()
     print("Received file saved in location /home/nicolas/PycharmProjects/pks_zadanie1/icon_copy.ico")
+print("Waiting for reply from client, whether \'connection\' should be maintained or canceled...")
+dataStream = mysocket.recvfrom(struct_header_size + address_size)
+data = dataStream[0]
+header = data[:struct_header_size]
+(msg_type, data_length, frag_index, frag_count, crc) = struct.unpack('BHHHH', header)
+if msg_type == 6 and data_length == 0:
+    print("Client decided to cancel connection, waiting for confirmation of cancel...")
+else:
+    if msg_type == 6 and data_length == 1 and frag_index == 0 and frag_count == 0 :
+        print("Client is maintaining the session, replying to client.")
+        reply_header = construct_reply(6, 1, 1, 1)
+        mysocket.sendto(reply_header, addr)
+        while True:
+            dataStream = mysocket.recvfrom(struct_header_size + address_size)
+            data = dataStream[0]
+            addr = dataStream[1]
+            header = data[:struct_header_size]
+            (msg_type, data_length, frag_index, frag_count, crc) = struct.unpack('BHHHH', header)
+            if(msg_type == 6 and data_length == 0 and frag_index == 0 and frag_count == 0):
+                print("Client is cancelling keepalive session.")
+                reply_header = construct_reply(6, 1, 1, 0)
+                mysocket.sendto(reply_header, addr)
+                break
+            print("Replying to client to keep the session alive.")
+            reply_header = construct_reply(6, 1, 1, 1)
+            mysocket.sendto(reply_header, addr)
+
 mysocket.close()
