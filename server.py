@@ -126,17 +126,21 @@ corr_received_file = b''.join(received_list)
 corr_write_file = open('/home/nicolas/PycharmProjects/pks_zadanie1/icon_corrupted_copy.ico', 'wb')
 corr_write_file.write(received_file)
 corr_write_file.close()
-print("Number of corrupted datagrams ", len(corrupted_list))
+print("Number of corrupted datagrams ", len(corrupted_list), corrupted_list)
+data = mysocket.recvfrom(struct_header_size+address_size)
+if  (1, 1, 1, 1) == struct.unpack('BHHHH',data[0]):
+    print("Client has sent all datagrams")
 if len(corrupted_list) != 0:
     while len(corrupted_list) > 0:
         requested_index = corrupted_list[0]
         reply_header = construct_reply(5, 0, 1, corrupted_list.pop(0))
+        print(corrupted_list)
         mysocket.sendto(reply_header, addr)
 
         dataStream = mysocket.recvfrom(fragSize + struct_header_size + address_size)
         data = dataStream[0]
         header = data[:struct_header_size]
-        (msg_type, data_length, frag_index, frag_count, crc) = struct.unpack('BHHHH', header)
+        (msg_type, data_length, frag_count, requested_index, crc) = struct.unpack('BHHHH', header)
         crcstr = "{0:b}".format(crc)
         if len(crcstr) < (len(key) - 1):
             crcstr = '0' * ((len(key) - 1) - len(crcstr)) + crcstr
@@ -145,14 +149,14 @@ if len(corrupted_list) != 0:
         crccheck = decode_data(data_as_string, key)
         temp = "0" * (len(key) - 1)
         if crccheck == temp:
-            print("Correct crc of requested datagram.")
-            received_list[frag_index - 1] = data[struct_header_size:]
+            print("Correct crc of requested datagram nr.", requested_index, frag_count)
+            received_list[requested_index - 1] = data[struct_header_size:]
             reply_header = construct_reply(4, 1, 1, 1)
             mysocket.sendto(reply_header, addr)
         else:
             print("---Incorrect crc of requested datagram, requesting the datagram again...---")
             corrupted_list.append(requested_index)
-            reply_header = construct_reply(4, 0, 1, frag_index)
+            reply_header = construct_reply(4, 0, 1, requested_index)
             mysocket.sendto(reply_header, addr)
 else:
     reply_header = construct_reply(5, 0, 0, 0)
