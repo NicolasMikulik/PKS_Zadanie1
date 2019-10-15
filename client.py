@@ -3,7 +3,6 @@ import socket
 import struct
 import sys
 import binascii
-import time
 # Zdroj funkcii xor(a, b), mod2div(divident, divisor) a decode_data(data, key) pre CRC:
 # https://www.geeksforgeeks.org/cyclic-redundancy-check-python/
 # Princip komunikacie servera a klienta:
@@ -59,9 +58,22 @@ def decode_data(data, key):
 def construct_reply(re_msg_type, re_data_length, re_frag_count, re_frag_index):
     reply_string = str(re_msg_type) + str(re_data_length) + str(re_frag_count) + str(re_frag_index)
     reply_string = "{0:b}".format(int(reply_string))
+    print(reply_string)
     reply_crc = encode_data(reply_string, key)
     reply_crc = int(reply_crc[-(len(key) - 1):], 2)
+    print(reply_crc)
     return struct.pack('BHHHH', re_msg_type, re_data_length, re_frag_count, re_frag_index, reply_crc)
+
+
+def construct_datagram(data_stream):
+    (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH', reply_data)
+    print(reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc)
+    reply_crcstr = "{0:b}".format(reply_crc)
+    if len(reply_crcstr) < (len(key)-1):
+        reply_crcstr = '0' * ((len(key) - 1) - len(reply_crcstr)) + reply_crcstr
+    # print(frag_index, reply_crcstr)
+    reply_string = str(reply_msg_type) + str(reply_data_length) + str(reply_frag_count) + str(reply_frag_index)
+    reply_string = "{0:b}".format(int(reply_string)) + reply_crcstr
 
 
 '''key = "1000001"
@@ -166,32 +178,5 @@ if reply_msg_type == 5 and reply_data_length == 0 and reply_frag_count == 1:
         reply_data = dataStream[0]
         (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH', reply_data)
 print(len(corrupted_list),"corrupted datagrams left")
-keepalive = input("Do you want to keep the session?[Y/n]")
-if keepalive == "y" or keepalive == "Y":
-    duration = int(input("Please enter duration in seconds: "))
-    while duration > 0:
-        keepalive_header = construct_reply(6, 1, 0, 0)
-        mysocket.sendto(keepalive_header, server_address)
-        print("Informing server about maintaining the session...")
-        dataStream = mysocket.recvfrom(address_size + reply_header_size)
-        reply_data = dataStream[0]
-        (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
-                                                                                                           reply_data)
-        if(reply_msg_type == 6 and reply_data_length == 1 and reply_frag_count == 1 and reply_frag_index == 1):
-            print("Server responded and is maintaining the session too.")
-        time.sleep(10)
-        duration -= 10
-        print("Time left", str(duration))
-        if duration == 0:
-            keep_session = input("Do you want to keep the session?[Y/n]")
-            if keep_session == "y" or keep_session == "Y":
-                duration = int(input("Please enter duration in seconds: "))
-            else:
-                break
-        if duration < 10:
-            duration = 10
-print("Informing server...")
-reply_header = construct_reply(6, 0, 0, 0)
-mysocket.sendto(reply_header, server_address)
 mysocket.close()
 file.close()
