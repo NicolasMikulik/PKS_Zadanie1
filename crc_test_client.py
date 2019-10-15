@@ -75,34 +75,24 @@ def encodeData(data, key):
 # Create a socket object
 s = socket.socket()
 
-# Define the port on which you want to connect
-port = 10100
+try:
+    mysocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    print("Client socket created")
+except socket.error:
+    print("Failed to create socket")
+    exit()
 
-# connect to the server on local computer
-s.connect(('localhost', port))
-
+server_address = ('localhost', 8484)
 # Send data to server 'Hello world'
-
-## s.sendall('Hello World')
-key = "1001"
-input_string = input("Enter data you want to send->")
-# s.sendall(input_string)
-data = (''.join(format(ord(x), 'b') for x in input_string))
-print(data)
-file = open("/home/nicolas/PycharmProjects/Coursera Assignments/romeo.txt", "rb")
-contents = file.read()
-data_as_string = bin(int(binascii.hexlify(contents), 16))
-file.close()
-crcstr = encodeData(data_as_string[2:], key)
-crc = int(crcstr[-(len(key)-1):], 2)
-print(crcstr[-(len(key)-1):])
-
-ans = encodeData(data, key)
-print(ans)
-s.sendall(ans.encode())
-
-# receive data from the server
-print(s.recv(1024))
-
+no_received_reply = 1
+while no_received_reply:
+    try:
+        print("Sending a message to server...")
+        mysocket.sendto("This is a message from client".encode(), server_address)
+        mysocket.settimeout(7.0)
+        mysocket.recvfrom(1024)
+        break
+    except socket.timeout:
+        no_received_reply = 1
 # close the connection
 s.close()

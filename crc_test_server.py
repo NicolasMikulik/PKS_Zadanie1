@@ -68,42 +68,29 @@ def decodeData(data, key):
 
 
 # Creating Socket
-s = socket.socket()
-print("Socket successfully created")
-
-# reserve a port on your computer in our
-# case it is 12345 but it can be anything
-port = 8451
-
-s.bind(('localhost', port))
-print("socket binded to %s" % (port))
-# put the socket into listening mode
-s.listen(5)
-print("socket is listening")
+try:
+    mysocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    print("Socket created")
+except socket.error:
+    print("Failed to create socket")
+    exit()
+server_address = ('localhost', 8484)
+try:  # Bind the socket to the port
+    mysocket.bind(server_address)
+    print('Starting up on {} port {}'.format(*server_address) + ". Waiting for client's message.")
+except socket.error:
+    print("Failed to bind socket")
 
 while True:
-    # Establish connection with client.
-    c, addr = s.accept()
-    print('Got connection from', addr)
+    try:
+        mysocket.settimeout(3.0)
+        data = mysocket.recvfrom(1024)
+        print(data[0].decode())
+        addr = data[1]
+        mysocket.sendto("Server replying to client".encode(), addr)
+    except socket.timeout:
+        print("No response from client obtained.")
+        exit()
 
-    # Get data from client
-    data = c.recv(1024)
 
-    print(data)
-
-    if not data:
-        break
-
-    key = "1001"
-
-    ans = decodeData(data.decode(), key)
-    print("Remainder after decoding is->" + ans)
-
-    # If remainder is all zeros then no error occured
-    temp = "0" * (len(key) - 1)
-    if ans == temp:
-        reply = "THANK you Data ->" + data.decode() + " Received No error FOUND"
-        c.sendall(reply.encode())
-    else:
-        c.sendall("Error in data".encode())
-    c.close()
+mysocket.close()
