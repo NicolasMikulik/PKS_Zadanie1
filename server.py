@@ -151,13 +151,13 @@ if len(corrupted_list) != 0:
         crccheck = decode_data(data_as_string, key)
         temp = "0" * (len(key) - 1)
         if crccheck == temp:
-            print("Correct crc of requested datagram.", reply_frag_index)
+            print("Received requested datagram nr.", reply_frag_index,"from client, correct CRC")
             received_list[reply_frag_index] = data[struct_header_size:]
             corrupted_list.pop(0)
             reply_header = construct_reply(4, 1, 1, 1)
             mysocket.sendto(reply_header, addr)
         else:
-            print("---Incorrect crc of requested datagram, requesting the datagram again...---")
+            print("---Received requested datagram nr.", reply_frag_index, "INCORRECT CRC, requesting again...---")
             reply_header = construct_reply(4, 0, 1, reply_frag_index)
             mysocket.sendto(reply_header, addr)
 else:
@@ -165,8 +165,8 @@ else:
     mysocket.sendto(reply_header, addr)
 if msg_type == 1:
     received_file = b''.join(received_list)
-    write_file = open('/home/nicolas/PycharmProjects/pks_zadanie1/icon_copy12.ico', 'wb')
+    write_file = open('/home/nicolas/PycharmProjects/pks_zadanie1/icon_copy24.ico', 'wb')
     write_file.write(received_file)
     write_file.close()
-    print("Received file saved in location /home/nicolas/PycharmProjects/pks_zadanie1/icon_copy.ico")
+    print("Received file saved in location /home/nicolas/PycharmProjects/pks_zadanie1/icon_copy24.ico")
 mysocket.close()
