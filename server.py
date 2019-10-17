@@ -85,7 +85,6 @@ except socket.error:
 key = "10011001"
 struct_header_size = calcsize('BHHHH')
 address_size = sys.getsizeof(server_address)
-save_path = "/home/nicolas/PycharmProjects/pks_zadanie1"
 fragSize_msg = mysocket.recvfrom(512)
 mysocket.sendto("Roger".encode(), fragSize_msg[1])
 fragSize = int(fragSize_msg[0].decode())
@@ -112,12 +111,12 @@ while True:
     temp = "0" * (len(key) - 1)
     if crccheck == temp:
         print("Datagram nr. " + str(frag_index) + ": correct crc")
-        reply_header = construct_reply(4, 1, 1, 1)
+        reply_header = struct.pack('BHHHH', 4, 1, 1, 1, 0)
         mysocket.sendto(reply_header, addr)
         received_list[frag_index] = data[struct_header_size:]
     else:
         print("---Datagram nr. " + str(frag_index) + ": INCORRECT crc---")
-        reply_header = construct_reply(4, 0, 1, frag_index)
+        reply_header = struct.pack('BHHHH', 4, 0, 1, frag_index, 0)
         corrupted_list.append(frag_index)
         mysocket.sendto(reply_header, addr)
     received_frag += 1
@@ -128,7 +127,7 @@ data_stream = mysocket.recvfrom(struct_header_size + address_size)
 (msg_type, data_length, frag_count, frag_index, info_crc) = struct.unpack('BHHHH', data_stream[0])
 if (1, 1, 1, 1) == (msg_type, data_length, frag_count, frag_index):
     print("Client confirmed it has sent all datagrams")
-    reply_header = construct_reply(5, 1, 1, 1)
+    reply_header = struct.pack('BHHHH', 5, 1, 1, 1, 0)
     mysocket.sendto(reply_header, data_stream[1])
 corr_received_file = b''.join(received_list)
 corr_write_file = open('/home/nicolas/PycharmProjects/pks_zadanie1/icon_corrupted_copy.ico', 'wb')
@@ -139,7 +138,7 @@ if len(corrupted_list) != 0:
     while len(corrupted_list) > 0:
         requested_index = corrupted_list[0]
         print("Requesting datagram nr.", requested_index)
-        reply_header = construct_reply(5, 0, 1, requested_index)
+        reply_header = struct.pack('BHHHH', 5, 0, 1, requested_index, 0)
         mysocket.sendto(reply_header, addr)
 
         data_stream = mysocket.recvfrom(fragSize + struct_header_size + address_size)
@@ -157,14 +156,14 @@ if len(corrupted_list) != 0:
             print("Received requested datagram nr.", reply_frag_index,"from client, correct CRC")
             received_list[reply_frag_index] = data[struct_header_size:]
             corrupted_list.pop(0)
-            reply_header = construct_reply(4, 1, 1, 1)
+            reply_header = struct.pack('BHHHH', 4, 1, 1, 1, 0)
             mysocket.sendto(reply_header, addr)
         else:
             print("---Received requested datagram nr.", reply_frag_index, "INCORRECT CRC, requesting again...---")
-            reply_header = construct_reply(4, 0, 1, reply_frag_index)
+            reply_header = struct.pack('BHHHH', 4, 0, 1, reply_frag_index, 0)
             mysocket.sendto(reply_header, addr)
 else:
-    reply_header = construct_reply(5, 0, 0, 0)
+    reply_header = struct.pack('BHHHH', 5, 0, 0, 0, 0)
     mysocket.sendto(reply_header, addr)
 if msg_type == 1:
     received_file = b''.join(received_list)
