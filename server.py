@@ -3,6 +3,7 @@ import sys
 from struct import *
 import binascii
 import struct
+import time
 
 # Zdroj funkcii xor(a, b), mod2div(divident, divisor) a decode_data(data, key) pre CRC:
 # https://www.geeksforgeeks.org/cyclic-redundancy-check-python/
@@ -94,7 +95,9 @@ received_frag = 0
 received_list = list()
 corrupted_list = list()
 while True:
+    mysocket.settimeout(5.0)
     data_stream = mysocket.recvfrom(fragSize + struct_header_size + address_size)
+    mysocket.settimeout(None)
     data = data_stream[0]
     addr = data_stream[1]
     header = data[:struct_header_size]
@@ -165,8 +168,8 @@ else:
     mysocket.sendto(reply_header, addr)
 if msg_type == 1:
     received_file = b''.join(received_list)
-    write_file = open('/home/nicolas/PycharmProjects/pks_zadanie1/icon_copy24.ico', 'wb')
+    write_file = open('/home/nicolas/PycharmProjects/pks_zadanie1/3_Rel_corrupted.pdf', 'wb')
     write_file.write(received_file)
     write_file.close()
-    print("Received file saved in location /home/nicolas/PycharmProjects/pks_zadanie1/icon_copy24.ico")
+    print("Received file saved in location /home/nicolas/PycharmProjects/pks_zadanie1/3_Rel_Prez_UDP_copy.pdf")
 mysocket.close()

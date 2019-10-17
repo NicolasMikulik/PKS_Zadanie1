@@ -77,7 +77,7 @@ try:
 except socket.error:
     print("Failed to create socket")
     exit()
-read_file = "/home/nicolas/Pictures/icon.ico"
+read_file = "/home/nicolas/Documents/FIIT/PKS/3_Rel_Prez_UDP.pdf"
 server_address = ('localhost', 8484)
 address_size = sys.getsizeof(server_address)  # print(str(sys.getsizeof(server_address)))
 reply_header_size = struct.calcsize('BHHHH')
@@ -100,7 +100,7 @@ while contents:
     data.extend(contents[:frag_size])
     data_length = len(data)
     data_as_string = bin(int(binascii.hexlify(data), 16))
-    if frag_index % 3 != 0:
+    if frag_index != 78:
         crcstr = encode_data(data_as_string[2:], key)
         crc = int(crcstr[-(len(key) - 1):], 2)
     else:
@@ -109,10 +109,20 @@ while contents:
         crcstr = encode_data(data_as_string[4:], key)
         crc = int(crcstr[-(len(key) - 1):], 2)
     header = struct.pack('BHHHH', msg_type, data_length, frag_count, frag_index, crc)
-    mysocket.sendto(header + bytearray(data),
-                    server_address)  # print("Datagram sent, awaiting response from server...")
-
-    data_stream = mysocket.recvfrom(address_size + reply_header_size)  # receives only header
+    while True:
+        try:
+            mysocket.sendto(header + bytearray(data),
+                        server_address)  # print("Datagram sent, awaiting response from server...")
+            mysocket.settimeout(5.0)
+            data_stream = mysocket.recvfrom(address_size + reply_header_size)  # receives only header
+            break
+        except socket.timeout:
+            print("Request timed out, datagram nr.", frag_index)
+            mysocket.settimeout(None)
+            pass
+        finally:
+            mysocket.settimeout(None)
+            pass
     reply_data = data_stream[0]
     (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
                                                                                                        reply_data)
@@ -148,7 +158,7 @@ if (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index) == (5
 if (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index) == (5, 1, 1, 1):
     print("Server response: Corrupted datagrams detected, server is requesting them to be resent.")
     while len(corrupted_list) > 0:
-        mysocket.settimeout(3.0)
+        # mysocket.settimeout(3.0)
         data_stream = mysocket.recvfrom(address_size + reply_header_size)
         reply_data = data_stream[0]
         (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH', reply_data)
