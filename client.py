@@ -92,7 +92,6 @@ def send_file(mysocket, server_IP, server_port):
     if reply_msg_type == (FIL + ACK) and reply_data_length == frag_size:
         print("Server response: Prepared to receive file.")
     frag_index = 0
-    key = "10011001"
     read_file = "/home/nicolas/PycharmProjects/Coursera Assignments/romeo.txt"
     file = open(read_file, "rb")
     contents = file.read()
@@ -106,7 +105,7 @@ def send_file(mysocket, server_IP, server_port):
         data.extend(contents[:frag_size])
         data_length = len(data)
         data_as_string = bin(int(binascii.hexlify(data), 16))
-        if frag_index != 78:
+        if frag_index != 7:
             crcstr = encode_data(data_as_string[2:], key)
             crc = int(crcstr[-(len(key) - 1):], 2)
         else:
@@ -121,9 +120,9 @@ def send_file(mysocket, server_IP, server_port):
         (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
                                                                                                            reply_data)
         notification = "Server response: "
-        if reply_data_length == 1:
+        if reply_msg_type == (FIL + ACK) and reply_data_length == 1:
             notification += "datagram nr. " + str(reply_frag_index) + " arrived successfully."
-        else:
+        if reply_msg_type == (FIL + REJ) and reply_data_length == 0:
             print("---Server response: CORRUPTED datagram", str(reply_frag_index)+"---")
             corrupted_list.append(reply_frag_index)
             notification += "datagram nr. " + str(
@@ -139,9 +138,10 @@ def send_file(mysocket, server_IP, server_port):
     reply_data = data_stream[0]
     (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
                                                                                                        reply_data)
-    if (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index) == (5, 0, 0, 0):
+    print(reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc)
+    if (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index) == ((FIL + ACK + FIN), 0, 0, 0):
         print("Server response: All datagrams received successfully")
-    if (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index) == (5, 1, 1, 1):
+    if (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index) == ((FIL + REJ + FIN), 1, 1, 1):
         print("Server response: Corrupted datagrams detected, server is requesting them to be resent.")
         while len(corrupted_list) > 0:
             # mysocket.settimeout(3.0)
@@ -161,18 +161,18 @@ def send_file(mysocket, server_IP, server_port):
             data_as_string = bin(int(binascii.hexlify(data), 16))
             crcstr = encode_data(data_as_string[2:], key)
             crc = int(crcstr[-(len(key) - 1):], 2)
-            header = struct.pack('BHHHH', msg_type, data_length, frag_count, reply_frag_index, crc)
+            header = struct.pack('BHHHH', REQ, data_length, frag_count, reply_frag_index, crc)
             mysocket.sendto(header + bytearray(data), server_address)
 
             data_stream = mysocket.recvfrom(address_size + header_size)
             con_data = data_stream[0]
             (con_msg_type, con_data_length, con_frag_count, con_frag_index, con_crc) = struct.unpack('BHHHH', con_data)
-            if (con_msg_type, con_data_length, con_frag_count, con_frag_index) == (4, 1, 1, 1):
+            if (con_msg_type, con_data_length, con_frag_count, con_frag_index) == ((REQ+ACK), 1, 1, 1):
                 print("Server response: RESENT datagram nr." + str(reply_frag_index) + " received successfully")
                 corrupted_list.remove(reply_frag_index)
                 if len(corrupted_list) == 0:
                     break
-            if con_msg_type == 4 and con_data_length == 0 and con_frag_count == 1:
+            if con_msg_type == (REQ+REJ) and con_data_length == 0 and con_frag_count == 1:
                 print("Server response: RESENT datagram nr." + str(reply_frag_index) + " corrupted again")
     print(len(corrupted_list), "corrupted datagrams left")
     mysocket.close()
@@ -204,7 +204,7 @@ if(role == "Y" or role == "y"):
 else:
     become_client()
 
-
+'''
 try:
     mysocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     print("Client socket created")
@@ -303,3 +303,4 @@ if (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index) == (5
 print(len(corrupted_list), "corrupted datagrams left")
 mysocket.close()
 file.close()
+'''
