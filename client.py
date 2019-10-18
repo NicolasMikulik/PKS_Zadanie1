@@ -77,7 +77,7 @@ def send_msg(socket, server_IP, server_port):
 
 
 def send_file(mysocket, server_IP, server_port):
-    server_address = ('localhost', 8484)
+    server_address = ('127.0.0.1', 8484)
     address_size = sys.getsizeof(server_address)  # print(str(sys.getsizeof(server_address)))
     header_size = struct.calcsize('BHHHH')
     frag_size = int(input("Please enter maximum size of a datagram in bytes: "))

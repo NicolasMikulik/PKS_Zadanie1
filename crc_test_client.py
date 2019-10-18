@@ -1,6 +1,7 @@
 # Import socket module
-import socket
 import binascii
+import socket
+
 
 def xor(a, b):
     # initialize result
@@ -71,6 +72,10 @@ def encodeData(data, key):
     codeword = data + remainder
     return codeword
 
+maxcrc = 0xffffffff
+
+def inverse_crc(data):
+    crc = binascii.crc32(data) & maxcrc
 
 # Create a socket object
 s = socket.socket()
@@ -84,7 +89,13 @@ except socket.error:
 
 server_address = ('localhost', 8484)
 # Send data to server 'Hello world'
-no_received_reply = 1
+readfile = open('/home/nicolas/PycharmProjects/pks_zadanie1/romeo_copy.txt', 'rb');
+data = readfile.read()
+crc = binascii.crc32(data)
+send_data = (binascii.crc32(data[:-15]))
+print(binascii.crc32(data), type(crc), send_data, type(send_data))
+print(crc == send_data)
+'''no_received_reply = 1
 while no_received_reply:
     try:
         print("Sending a message to server...")
@@ -93,6 +104,6 @@ while no_received_reply:
         mysocket.recvfrom(1024)
         break
     except socket.timeout:
-        no_received_reply = 1
+        no_received_reply = 1'''
 # close the connection
 s.close()

@@ -159,7 +159,7 @@ def receive_fil(mysocket, frag_size, client_address):
     write_file = open('/home/nicolas/PycharmProjects/pks_zadanie1/romeo_copy.txt', 'wb')
     write_file.write(received_file)
     write_file.close()
-    print("Received file saved in location /home/nicolas/PycharmProjects/pks_zadanie1/romeo_copy.txt")
+    print("Received file saved in location /home/nicolas/PycharmProjects/pks_zadanie1/romeo_copy_f.txt")
     mysocket.close()
     pass
 
