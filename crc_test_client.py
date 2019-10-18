@@ -81,9 +81,15 @@ def inverse_crc(data):
 # Create a socket object
 s = socket.socket()
 
-import threading
-def keepalive():
-    mysocket.sendto("Client: Maintaining session".encode(), ('localhost',8484))
+import time, multiprocessing
+def keepalive(socket_info):
+    mysocket = socket_info[0]
+    server_address = socket_info[1]
+    while True:
+        time.sleep(2.5)
+        print("\nStatement", server_address)
+        mysocket.sendto("Client: Maintaining session".encode(), ('localhost', 8484))
+        print(mysocket.recvfrom(1024)[0].decode(),"\n")
 
 
 try:
@@ -95,6 +101,7 @@ except socket.error:
 
 server_address = ('localhost', 8484)
 # Send data to server 'Hello world'
+info = (mysocket, server_address)
 readfile = open('/home/nicolas/PycharmProjects/pks_zadanie1/romeo_copy.txt', 'rb');
 data = readfile.read()
 crc = binascii.crc32(data)
@@ -102,16 +109,23 @@ send_data = (binascii.crc32(data[:-15]))
 print(binascii.crc32(data), type(crc), send_data, type(send_data))
 print(crc == send_data)
 no_received_reply = 1
+p = multiprocessing.Process(target=keepalive, args=(info,))
+p.start()
 while no_received_reply:
-    try:
-        keeper = threading.Timer(3.0, keepalive).start()
+    answer = input("End?[y/n]")
+    if answer == "y":
+        p.terminate()
+        print("Process was terminated")
+        break
+    '''try:
+        keeper = threading.Timer(10.0, keepalive).start()
         print("Sending a message to server...")
-        mysocket.settimeout(8.0)
+        mysocket.settimeout(15.0)
         data = mysocket.recvfrom(1024)
         print(data[0].decode(), "response")
         mysocket.settimeout(None)
     except socket.timeout:
         print("Server did not respond in time")
-        no_received_reply = 1
+        no_received_reply = 1'''
 # close the connection
 s.close()
