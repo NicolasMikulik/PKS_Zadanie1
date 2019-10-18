@@ -83,11 +83,12 @@ except socket.error:
 
 while True:
     try:
-        mysocket.settimeout(3.0)
+        mysocket.settimeout(30.0)
         data = mysocket.recvfrom(1024)
         print(data[0].decode())
         addr = data[1]
         mysocket.sendto("Server replying to client".encode(), addr)
+        mysocket.settimeout(None)
     except socket.timeout:
         print("No response from client obtained.")
         exit()

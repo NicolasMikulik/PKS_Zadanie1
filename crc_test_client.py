@@ -77,8 +77,14 @@ maxcrc = 0xffffffff
 def inverse_crc(data):
     crc = binascii.crc32(data) & maxcrc
 
+
 # Create a socket object
 s = socket.socket()
+
+import threading
+def keepalive():
+    mysocket.sendto("Client: Maintaining session".encode(), ('localhost',8484))
+
 
 try:
     mysocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -95,15 +101,17 @@ crc = binascii.crc32(data)
 send_data = (binascii.crc32(data[:-15]))
 print(binascii.crc32(data), type(crc), send_data, type(send_data))
 print(crc == send_data)
-'''no_received_reply = 1
+no_received_reply = 1
 while no_received_reply:
     try:
+        keeper = threading.Timer(3.0, keepalive).start()
         print("Sending a message to server...")
-        mysocket.sendto("This is a message from client".encode(), server_address)
-        mysocket.settimeout(7.0)
-        mysocket.recvfrom(1024)
-        break
+        mysocket.settimeout(8.0)
+        data = mysocket.recvfrom(1024)
+        print(data[0].decode(), "response")
+        mysocket.settimeout(None)
     except socket.timeout:
-        no_received_reply = 1'''
+        print("Server did not respond in time")
+        no_received_reply = 1
 # close the connection
 s.close()
