@@ -535,7 +535,7 @@ def become_client():
     server_port = input("Please enter the destination port: ")
     server_port = 60500
     transfer = input("Do you wish to send text messages[1] or files[2]?")
-    if(transfer == 1):
+    if(transfer == "1"):
         send_msg(mysocket, server_IP, server_port)
     else:
         send_file(mysocket, server_IP, server_port)
