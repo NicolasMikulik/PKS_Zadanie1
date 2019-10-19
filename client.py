@@ -2,7 +2,6 @@ import binascii
 import math
 import socket
 import struct
-import sys
 
 
 # Zdroj funkcii xor(a, b), mod2div(divident, divisor) a decode_data(data, key) pre CRC:
@@ -11,49 +10,8 @@ import sys
 # https://www.binarytides.com/programming-udp-sockets-in-python/?fbclid=IwAR2-JPM5O9EhroW-5WsBSzu-53NFYfqN54WqKIA8WcrJEWKmmX8gZrBo-4Y
 # UDP s umiestnovanim datagramov do pola podla indexu datagramu:
 # https://stackoverflow.com/questions/40325616/sending-file-over-udp-divided-into-fragments?noredirect=1&lq=1
-
-# zaciatok funkcii pre crc zo zdroja https://www.geeksforgeeks.org/cyclic-redundancy-check-python/
-def xor(a, b):
-    result = []
-    for i in range(1, len(b)):
-        if a[i] == b[i]:
-            result.append('0')
-        else:
-            result.append('1')
-    return ''.join(result)
-
-
-def mod2div(divident, divisor):
-    pick = len(divisor)
-    tmp = divident[0: pick]
-    while pick < len(divident):
-        if tmp[0] == '1':
-            tmp = xor(divisor, tmp) + divident[pick]
-        else:
-            tmp = xor('0' * pick, tmp) + divident[pick]
-        pick += 1
-    if tmp[0] == '1':
-        tmp = xor(divisor, tmp)
-    else:
-        tmp = xor('0' * pick, tmp)
-    checkword = tmp
-    return checkword
-
-
-def encode_data(client_data, client_key):
-    l_key = len(client_key)
-    appended_data = client_data + '0' * (l_key - 1)
-    remainder = mod2div(appended_data, client_key)
-    codeword = client_data + remainder
-    return codeword
-
-
-def decode_data(data, key):
-    l_key = len(key)
-    appended_data = data + '0' * (l_key - 1)
-    remainder = mod2div(appended_data, key)
-    return remainder
-# koniec funkcii pre crc
+# Kniznica pouzita pre crc16; polynom x^16+x^12+x^5+1, decimalna hodnota=69665, hexad. hodnota=11021
+# https://docs.python.org/3/library/binascii.html
 
 
 SYN = 1
@@ -78,7 +36,6 @@ def send_msg(socket, server_IP, server_port):
 
 def send_file(mysocket, server_IP, server_port):
     server_address = ('127.0.0.1', 8484)
-    address_size = sys.getsizeof(server_address)  # print(str(sys.getsizeof(server_address)))
     header_size = struct.calcsize('BHHHH')
     frag_size = int(input("Please enter maximum size of a datagram in bytes: "))
     if frag_size > (1500 - IP_HEAD - UDP_HEAD - header_size):
@@ -113,7 +70,7 @@ def send_file(mysocket, server_IP, server_port):
             crc = binascii.crc_hqx(data[1:],0)
         header = struct.pack('BHHHH', FIL, data_length, frag_count, frag_index, crc)
         mysocket.sendto(header + bytearray(data), server_address)  # print("Datagram sent, awaiting response from server...")
-        data_stream = mysocket.recvfrom(address_size + header_size)  # receives only header
+        data_stream = mysocket.recvfrom(header_size+UDP_HEAD)  # receives only header
         reply_data = data_stream[0]
         (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
                                                                                                            reply_data)
@@ -132,7 +89,7 @@ def send_file(mysocket, server_IP, server_port):
     info_header = struct.pack('BHHHH', FIL+ACK, 1, 1, 1, 0)
     mysocket.sendto(info_header, server_address)
 
-    data_stream = mysocket.recvfrom(address_size + header_size)
+    data_stream = mysocket.recvfrom(header_size+UDP_HEAD)
     reply_data = data_stream[0]
     (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
                                                                                                        reply_data)
@@ -143,7 +100,7 @@ def send_file(mysocket, server_IP, server_port):
         print("Server response: Corrupted datagrams detected, server is requesting them to be resent.")
         while len(corrupted_list) > 0:
             # mysocket.settimeout(3.0)
-            data_stream = mysocket.recvfrom(address_size + header_size)
+            data_stream = mysocket.recvfrom(header_size+UDP_HEAD)
             reply_data = data_stream[0]
             (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
                                                                                                                reply_data)
@@ -160,7 +117,7 @@ def send_file(mysocket, server_IP, server_port):
             header = struct.pack('BHHHH', REQ, data_length, frag_count, reply_frag_index, crc)
             mysocket.sendto(header + bytearray(data), server_address)
 
-            data_stream = mysocket.recvfrom(address_size + header_size)
+            data_stream = mysocket.recvfrom(header_size+UDP_HEAD)
             con_data = data_stream[0]
             (con_msg_type, con_data_length, con_frag_count, con_frag_index, con_crc) = struct.unpack('BHHHH', con_data)
             if (con_msg_type, con_data_length, con_frag_count, con_frag_index) == ((REQ+ACK), 1, 1, 1):

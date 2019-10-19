@@ -1,7 +1,6 @@
 import binascii
 import socket
 import struct
-from struct import *
 
 
 # Zdroj funkcii xor(a, b), mod2div(divident, divisor) a decode_data(data, key) pre CRC:
@@ -10,50 +9,8 @@ from struct import *
 # https://www.binarytides.com/programming-udp-sockets-in-python/?fbclid=IwAR2-JPM5O9EhroW-5WsBSzu-53NFYfqN54WqKIA8WcrJEWKmmX8gZrBo-4Y
 # UDP s umiestnovanim datagramov do pola podla indexu datagramu:
 # https://stackoverflow.com/questions/40325616/sending-file-over-udp-divided-into-fragments?noredirect=1&lq=1
-
-# zaciatok funkcii pre crc zo zdroja https://www.geeksforgeeks.org/cyclic-redundancy-check-python/
-def xor(a, b):
-    result = []
-    for i in range(1, len(b)):
-        if a[i] == b[i]:
-            result.append('0')
-        else:
-            result.append('1')
-    return ''.join(result)
-
-
-# koniec funkcii pre crc
-def mod2div(divident, divisor):
-    pick = len(divisor)
-    tmp = divident[0: pick]
-    while pick < len(divident):
-        if tmp[0] == '1':
-            tmp = xor(divisor, tmp) + divident[pick]
-        else:  # If leftmost bit is '0'
-            tmp = xor('0' * pick, tmp) + divident[pick]
-        pick += 1
-    if tmp[0] == '1':
-        tmp = xor(divisor, tmp)
-    else:
-        tmp = xor('0' * pick, tmp)
-    checkword = tmp
-    return checkword
-
-
-def decode_data(data, key):
-    l_key = len(key)
-    appended_data = data + '0' * (l_key - 1)
-    remainder = mod2div(appended_data, key)
-    return remainder
-
-
-def encode_data(client_data, client_key):
-    l_key = len(client_key)
-    appended_data = client_data + '0' * (l_key - 1)
-    remainder = mod2div(appended_data, client_key)
-    codeword = client_data + remainder
-    return codeword
-# koniec funkcii pre crc
+# Kniznica pouzita pre crc16; polynom x^16+x^12+x^5+1, decimalna hodnota=69665, hexad. hodnota=11021
+# https://docs.python.org/3/library/binascii.html
 
 
 SYN = 1
@@ -65,7 +22,6 @@ FIL = 32
 REQ = 64
 UDP_HEAD = 8
 IP_HEAD = 20
-key = "10011001"
 
 
 def receive_msg(mysocket, frag_size, client_address):
@@ -73,7 +29,7 @@ def receive_msg(mysocket, frag_size, client_address):
 
 
 def receive_fil(mysocket, frag_size, client_address):
-    struct_header_size = calcsize('BHHHH')
+    struct_header_size = struct.calcsize('BHHHH')
     info_header = struct.pack('BHHHH', (FIL + ACK), frag_size, 0, 0, 0)
     mysocket.sendto(info_header, client_address)
     received_file = bytearray()
@@ -169,7 +125,7 @@ def become_server():
     except socket.error:
         print("Failed to bind socket")
 
-    struct_header_size = calcsize('BHHHH')
+    struct_header_size = struct.calcsize('BHHHH')
     init_info = mysocket.recvfrom(struct_header_size+UDP_HEAD)
     client_address = init_info[1]
     (init_type, frag_size, init_count, init_index, init_crc) = struct.unpack('BHHHH', init_info[0])
