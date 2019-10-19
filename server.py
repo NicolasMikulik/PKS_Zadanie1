@@ -399,20 +399,19 @@ def receive_msg(mysocket, frag_size, client_address):
     p = multiprocessing.Process(target=hold_session_recv, args=(info,))
     p.start()
     while True:
-        if (p.is_alive() == False):
-            print("Keepalive session not present anymore.")
+        if not p.is_alive():
+            print("\nKeepalive session not present anymore.")
         answer = input("Press [1] to view message history, [2] to end keepalive session.")
         if answer == "1":
             print(history, "\n")
         if answer == "2":
             p.terminate()  # print("Process was terminated")
-            info_header = struct.pack('BHHHH', FIN, 0, 0, 0, 0)
-            mysocket.sendto(info_header, client_address)
+            '''info_header = struct.pack('BHHHH', FIN, 0, 0, 0, 0)
+            mysocket.sendto(info_header, client_address)'''
             break
-    info_header = struct.pack('BHHHH', (FIN+ACK), 0, 0, 0, 0)
-    mysocket.sendto(info_header, client_address)
     print("Closing server socket.")
     mysocket.close()
+    return 0
     pass
 
 
@@ -514,11 +513,17 @@ def become_server():
         print("Failed to bind socket")
 
     header_size = struct.calcsize('BHHHH')
-    init_info = mysocket.recvfrom(header_size+UDP_HEAD)
+    try:
+        mysocket.settimeout(300.0)
+        init_info = mysocket.recvfrom(header_size+UDP_HEAD)
+        mysocket.settimeout(None)
+    except:
+        print("test")
+        pass
     client_address = init_info[1]
     (init_type, frag_size, init_count, init_index, init_crc) = struct.unpack('BHHHH', init_info[0])
     if init_type == (MSG+SYN):
-        receive_msg(mysocket, frag_size, client_address)
+        return receive_msg(mysocket, frag_size, client_address)
     if init_type == (FIL+SYN):
         receive_fil(mysocket, frag_size, client_address)
 
@@ -539,14 +544,48 @@ def become_client():
     else:
         send_file(mysocket, server_IP, server_port)
 
+while True:
+    role = input("Enter [s] for becoming a server, [c] for becoming a client or [exit] for closing the application.")
+    if role == "s":
+        try:
+            mysocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            print("Server socket created")
+        except socket.error:
+            print("Failed to create server socket")
+            exit()
+        port = input("Please enter the number of port on which you want to be receiving data: ")
+        port = 8484
+        server_address = ('localhost', port)
+        try:  # Bind the socket to the port
+            mysocket.bind(server_address)
+            print('Starting up on {} port {}'.format(*server_address) + ". Waiting for fragment size.")
+        except socket.error:
+            print("Failed to bind socket")
 
-role = input("Do you wish to be a receiver?[Y/n]")
-if(role == "Y" or role == "y"):
-    become_server()
-else:
-    become_client()
-'''
-try:
+        header_size = struct.calcsize('BHHHH')
+        try:
+            mysocket.settimeout(300000.0)
+            init_info = mysocket.recvfrom(header_size + UDP_HEAD)
+            mysocket.settimeout(None)
+        except:
+            print("test")
+            pass
+        client_address = init_info[1]
+        (init_type, frag_size, init_count, init_index, init_crc) = struct.unpack('BHHHH', init_info[0])
+        if init_type == (MSG + SYN):
+            receive_msg(mysocket, frag_size, client_address)
+        if init_type == (FIL + SYN):
+            receive_fil(mysocket, frag_size, client_address)
+
+        print("End of server")
+
+    if role == "c" or role == "C":
+        become_client()
+    if role == "exit":
+        print("Closing...")
+
+
+'''try:
     mysocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     print("Socket created")
 except socket.error:
