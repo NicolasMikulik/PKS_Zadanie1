@@ -106,13 +106,15 @@ def send_file(mysocket, server_IP, server_port):
         data_length = len(data)
         data_as_string = bin(int(binascii.hexlify(data), 16))
         if frag_index != 7:
-            crcstr = encode_data(data_as_string[2:], key)
-            crc = int(crcstr[-(len(key) - 1):], 2)
+            '''crcstr = encode_data(data_as_string[2:], key)
+            crc = int(crcstr[-(len(key) - 1):], 2)'''
+            crc = binascii.crc_hqx(data,0)
         else:
             data = data[2:]
             print("Intentionally sending smaller datagram ", len(data))
-            crcstr = encode_data(data_as_string[4:], key)
-            crc = int(crcstr[-(len(key) - 1):], 2)
+            '''crcstr = encode_data(data_as_string[4:], key)
+            crc = int(crcstr[-(len(key) - 1):], 2)'''
+            crc = binascii.crc_hqx(data[1:],0)
         header = struct.pack('BHHHH', FIL, data_length, frag_count, frag_index, crc)
         mysocket.sendto(header + bytearray(data), server_address)  # print("Datagram sent, awaiting response from server...")
         data_stream = mysocket.recvfrom(address_size + header_size)  # receives only header
@@ -120,9 +122,9 @@ def send_file(mysocket, server_IP, server_port):
         (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
                                                                                                            reply_data)
         notification = "Server response: "
-        if reply_msg_type == (FIL + ACK) and reply_data_length == 1:
+        if reply_msg_type == (FIL + ACK) and (reply_crc == crc):
             notification += "datagram nr. " + str(reply_frag_index) + " arrived successfully."
-        if reply_msg_type == (FIL + REJ) and reply_data_length == 0:
+        if reply_msg_type == (FIL + REJ) and (reply_crc != crc):
             print("---Server response: CORRUPTED datagram", str(reply_frag_index)+"---")
             corrupted_list.append(reply_frag_index)
             notification += "datagram nr. " + str(
@@ -158,9 +160,10 @@ def send_file(mysocket, server_IP, server_port):
             data = bytearray()
             data.extend(contents[:frag_size])
             data_length = len(data)
-            data_as_string = bin(int(binascii.hexlify(data), 16))
+            '''data_as_string = bin(int(binascii.hexlify(data), 16))
             crcstr = encode_data(data_as_string[2:], key)
-            crc = int(crcstr[-(len(key) - 1):], 2)
+            crc = int(crcstr[-(len(key) - 1):], 2)'''
+            crc = binascii.crc_hqx(data,0)
             header = struct.pack('BHHHH', REQ, data_length, frag_count, reply_frag_index, crc)
             mysocket.sendto(header + bytearray(data), server_address)
 
