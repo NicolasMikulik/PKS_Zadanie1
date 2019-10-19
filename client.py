@@ -156,12 +156,18 @@ def send_msg(mysocket, server_IP, server_port):
                 read_contents = bytearray()
                 read_contents.extend(contents[0:])
                 msg_size = len(contents)
-                frag_count = math.ceil(msg_size / int(frag_size))
+                frag_count = math.floor(msg_size / int(frag_size))
+                if frag_count < 1:
+                    frag_count = 1
                 print("Message of size " + str(msg_size) + " is being sent in " + str(frag_count) + " datagrams")
                 corrupted_list = list()
                 while contents:
                     data = bytearray()
-                    data.extend(contents[:frag_size])
+                    if len(contents) - 2*frag_size < 0:
+                        data.extend(contents)
+                        contents = contents[frag_size:]
+                    else:
+                        data.extend(contents[:frag_size])
                     data_length = len(data)
                     if frag_index != 2:
                         crc = binascii.crc_hqx(data, 0)
