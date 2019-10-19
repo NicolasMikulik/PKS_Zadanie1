@@ -37,6 +37,38 @@ def keepalive(socket_info):
         mysocket.sendto(kal_header, server_address)
 
 
+def hold_session_recv(socket_info):
+    mysocket = socket_info[0]
+    server_address = socket_info[1]
+    header_size = struct.calcsize('BHHHH')
+    waiting = 3
+    while True:
+        try:
+            mysocket.settimeout(25.0)
+            info = mysocket.recvfrom(header_size + UDP_HEAD)
+            (kal, length, count, index, crc) = struct.unpack('BHHHH', info[0])
+            if kal == KAL:
+                print("Client is maintaining the session, server is responding")
+                info_header = struct.pack('BHHHH', (KAL + ACK), 0, 0, 0, 0)
+                mysocket.sendto(info_header, server_address)
+            if kal == FIN or kal == (FIN + ACK):
+                print("Client is closing the session, server is acknowledging.")
+                info_header = struct.pack('BHHHH', (FIN + ACK), 0, 0, 0, 0)
+                mysocket.sendto(info_header, server_address)
+                mysocket.settimeout(None)
+                break
+            mysocket.settimeout(None)
+        except socket.timeout:
+            waiting -= 1
+            if waiting == 0:
+                print("Client stopped responding")
+                info_header = struct.pack('BHHHH', FIN, 0, 0, 0, 0)
+                mysocket.sendto(info_header, server_address)
+                break
+            print("No reply from client received.")
+    print("End of keepalive.")
+
+
 def send_msg(socket, server_IP, server_port):
     pass
 
@@ -363,28 +395,20 @@ def receive_msg(mysocket, frag_size, client_address):
                 print(len(corrupted_list), "corrupted datagrams left, expecting reply from client")
                 receiving = 1
                 sending = 0
-    waiting = 3
+    info = (mysocket, client_address)
+    p = multiprocessing.Process(target=hold_session_recv, args=(info,))
+    p.start()
     while True:
-        try:
-            mysocket.settimeout(25.0)
-            data_stream = mysocket.recvfrom(frag_size + header_size + UDP_HEAD)
-            data = data_stream[0]
-            kal, length, count, index, crc = struct.unpack('BHHHH', data[:header_size])
-            if kal == KAL:
-                print("Client is maintaining session.")
-                info_header = struct.pack('BHHHH', (KAL+ACK), 0, 0, 0, 0)
-                mysocket.sendto(info_header, client_address)
-                continue
-            if kal != KAL and kal == (FIN+ACK):
-                print("Client is canceling the session. Server will let client know it acknowledges the finish.")
-            mysocket.settimeout(None)
+        if (p.is_alive() == False):
+            print("Keepalive session not present anymore.")
+        answer = input("Press [1] to view message history, [2] to end keepalive session.")
+        if answer == "1":
+            print(history, "\n")
+        if answer == "2":
+            p.terminate()  # print("Process was terminated")
+            info_header = struct.pack('BHHHH', FIN, 0, 0, 0, 0)
+            mysocket.sendto(info_header, client_address)
             break
-        except socket.timeout:
-            waiting -= 1
-            if waiting == 0:
-                print("No more messages received from client, server is closing the session and informing client.")
-            else:
-                print("Waiting for message from client.")
     info_header = struct.pack('BHHHH', (FIN+ACK), 0, 0, 0, 0)
     mysocket.sendto(info_header, client_address)
     print("Closing server socket.")

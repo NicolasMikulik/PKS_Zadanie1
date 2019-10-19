@@ -37,11 +37,11 @@ def keepalive(socket_info):
         mysocket.sendto(kal_header, server_address)
 
 
-def maintain_session_recv(socket_info, recv_process):
+def maintain_session_recv(socket_info):
     mysocket = socket_info[0]
     server_address = socket_info[1]
     header_size = struct.calcsize('BHHHH')
-    send_p = multiprocessing.Process(target=maintain_session_send(), args=(socket_info,))
+    send_p = multiprocessing.Process(target=keepalive, args=(socket_info,))
     send_p.start()
     waiting = 3
     while True:
@@ -52,43 +52,22 @@ def maintain_session_recv(socket_info, recv_process):
             if kal == (KAL + ACK):
                 print("Server is maintaining the session")
             if kal == FIN or kal == (FIN + ACK):
-                print("Server is closing the session")
+                print("Server is closing the session, client acknowledges.")
                 info_header = struct.pack('BHHHH', (FIN+ACK), 0, 0, 0, 0)
                 mysocket.sendto(info_header, server_address)
                 send_p.terminate()
+                mysocket.settimeout(None)
                 break
             mysocket.settimeout(None)
         except socket.timeout:
             waiting -= 1
             if waiting == 0:
-                print("Server stopped responding")
+                print("Server stopped responding, client is closing the session.")
+                info_header = struct.pack('BHHHH', FIN, 0, 0, 0, 0)
+                mysocket.sendto(info_header, server_address)
                 break
             print("No reply from server received.")
-
-
-def maintain_session_send(socket_info):
-    mysocket = socket_info[0]
-    server_address = socket_info[1]
-    while True:
-        try:
-            time.sleep(5.0)
-            kal_header = struct.pack('BHHHH', KAL, 0, 0, 0, 0)
-            mysocket.sendto(kal_header, server_address)
-            mysocket.settimeout(25.0)
-            info = mysocket.recvfrom(header_size+UDP_HEAD)
-            (kal, length, count, index, crc) = struct.unpack('BHHHH', info[0])
-            if kal == (KAL + ACK):
-                print("Server is maintaining the session")
-            if kal == FIN or kal == (FIN + ACK):
-                print("Server is closing the session")
-            mysocket.settimeout(None)
-        except socket.timeout:
-            waiting -= 1
-            if waiting == 0:
-                print("Server stopped responding")
-                break
-            print("No reply from server received.")
-            pass
+    print("End of keepalive.")
 
 
 def receive_msg(mysocket, frag_size, client_address):
@@ -403,12 +382,17 @@ def send_msg(mysocket, server_IP, server_port):
                     receiving = 0
                     sending = 1
     print("Maintaining session...")
+    info = (mysocket, server_address)
+    p = multiprocessing.Process(target=maintain_session_recv, args=(info,))
+    p.start()
     while True:
-        answer = input("Press [1] to view message history, [2] to end keepalive session? [y/n]")
+        answer = input("Press [1] to view message history, [2] to end keepalive session.")
         if answer == "1":
             print(history, "\n")
         if answer == "2":
             p.terminate()  # print("Process was terminated")
+            info_header = struct.pack('BHHHH', FIN, 0, 0, 0, 0)
+            mysocket.sendto(info_header, server_address)
             break
 
     print("Closing client socket")
