@@ -33,8 +33,62 @@ def keepalive(socket_info):
     server_address = socket_info[1]
     while True:
         time.sleep(5.0)
-        kal_header = struct.pack('BHHHH',KAL,0,0,0,0)
+        kal_header = struct.pack('BHHHH', KAL, 0, 0, 0, 0)
         mysocket.sendto(kal_header, server_address)
+
+
+def maintain_session_recv(socket_info, recv_process):
+    mysocket = socket_info[0]
+    server_address = socket_info[1]
+    header_size = struct.calcsize('BHHHH')
+    send_p = multiprocessing.Process(target=maintain_session_send(), args=(socket_info,))
+    send_p.start()
+    waiting = 3
+    while True:
+        try:
+            mysocket.settimeout(25.0)
+            info = mysocket.recvfrom(header_size + UDP_HEAD)
+            (kal, length, count, index, crc) = struct.unpack('BHHHH', info[0])
+            if kal == (KAL + ACK):
+                print("Server is maintaining the session")
+            if kal == FIN or kal == (FIN + ACK):
+                print("Server is closing the session")
+                info_header = struct.pack('BHHHH', (FIN+ACK), 0, 0, 0, 0)
+                mysocket.sendto(info_header, server_address)
+                send_p.terminate()
+                break
+            mysocket.settimeout(None)
+        except socket.timeout:
+            waiting -= 1
+            if waiting == 0:
+                print("Server stopped responding")
+                break
+            print("No reply from server received.")
+
+
+def maintain_session_send(socket_info):
+    mysocket = socket_info[0]
+    server_address = socket_info[1]
+    while True:
+        try:
+            time.sleep(5.0)
+            kal_header = struct.pack('BHHHH', KAL, 0, 0, 0, 0)
+            mysocket.sendto(kal_header, server_address)
+            mysocket.settimeout(25.0)
+            info = mysocket.recvfrom(header_size+UDP_HEAD)
+            (kal, length, count, index, crc) = struct.unpack('BHHHH', info[0])
+            if kal == (KAL + ACK):
+                print("Server is maintaining the session")
+            if kal == FIN or kal == (FIN + ACK):
+                print("Server is closing the session")
+            mysocket.settimeout(None)
+        except socket.timeout:
+            waiting -= 1
+            if waiting == 0:
+                print("Server stopped responding")
+                break
+            print("No reply from server received.")
+            pass
 
 
 def receive_msg(mysocket, frag_size, client_address):
@@ -125,6 +179,7 @@ def receive_fil(mysocket, frag_size, client_address):
 def send_msg(mysocket, server_IP, server_port):
     server_address = ('127.0.0.1', 8484)
     header_size = struct.calcsize('BHHHH')
+    history = list()
     frag_size = int(input("Please enter maximum size of a datagram in bytes: "))
     if frag_size > (1500 - IP_HEAD - UDP_HEAD - header_size):
         frag_size = 1500 - IP_HEAD - UDP_HEAD - header_size
@@ -168,6 +223,8 @@ def send_msg(mysocket, server_IP, server_port):
                 contact = 0
                 continue
             if contact == 1:
+                message_entry = "Client: " + message
+                history.append(message_entry)
                 contents = str.encode(message)
                 read_contents = bytearray()
                 read_contents.extend(contents[0:])
@@ -340,9 +397,20 @@ def send_msg(mysocket, server_IP, server_port):
                         reply_header = struct.pack('BHHHH', (MSG + ACK + FIN), 0, 0, 0, 0)
                         mysocket.sendto(reply_header, server_address)
                     received_msg = b''.join(received_list)
-                    print(received_msg.decode())
+                    message_entry = "Server: "+b''.join(received_list).decode()
+                    history.append(message_entry)
+                    print("Server:",received_msg.decode())
                     receiving = 0
                     sending = 1
+    print("Maintaining session...")
+    while True:
+        answer = input("Press [1] to view message history, [2] to end keepalive session? [y/n]")
+        if answer == "1":
+            print(history, "\n")
+        if answer == "2":
+            p.terminate()  # print("Process was terminated")
+            break
+
     print("Closing client socket")
     mysocket.close()
     pass

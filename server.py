@@ -148,6 +148,7 @@ def receive_msg(mysocket, frag_size, client_address):
     info_header = struct.pack('BHHHH', (MSG + ACK), frag_size, 0, 0, 0)
     mysocket.sendto(info_header, client_address)
     print("Client set fragment size to: " + str(frag_size))
+    history = list()
     contact = 1
     receiving = 1
     sending = 0
@@ -236,7 +237,10 @@ def receive_msg(mysocket, frag_size, client_address):
                 reply_header = struct.pack('BHHHH', (MSG + ACK + FIN), 0, 0, 0, 0)
                 mysocket.sendto(reply_header, client_address)
             received_msg = b''.join(received_list)
-            print(received_msg.decode())
+            message_entry = "Client: " + b''.join(received_list).decode()
+            history.append(message_entry)
+            print("Client:", received_msg.decode())
+
             print("Please enter messages longer than 2 characters (3 characters min.).")
             receiving = 0
             sending = 1
@@ -264,6 +268,8 @@ def receive_msg(mysocket, frag_size, client_address):
                 contact = 0
                 continue
             if contact == 1:
+                message_entry = "Server: " + message
+                history.append(message_entry)
                 contents = str.encode(message)
                 read_contents = bytearray()
                 read_contents.extend(contents[0:])
@@ -357,6 +363,30 @@ def receive_msg(mysocket, frag_size, client_address):
                 print(len(corrupted_list), "corrupted datagrams left, expecting reply from client")
                 receiving = 1
                 sending = 0
+    waiting = 3
+    while True:
+        try:
+            mysocket.settimeout(25.0)
+            data_stream = mysocket.recvfrom(frag_size + header_size + UDP_HEAD)
+            data = data_stream[0]
+            kal, length, count, index, crc = struct.unpack('BHHHH', data[:header_size])
+            if kal == KAL:
+                print("Client is maintaining session.")
+                info_header = struct.pack('BHHHH', (KAL+ACK), 0, 0, 0, 0)
+                mysocket.sendto(info_header, client_address)
+                continue
+            if kal != KAL and kal == (FIN+ACK):
+                print("Client is canceling the session. Server will let client know it acknowledges the finish.")
+            mysocket.settimeout(None)
+            break
+        except socket.timeout:
+            waiting -= 1
+            if waiting == 0:
+                print("No more messages received from client, server is closing the session and informing client.")
+            else:
+                print("Waiting for message from client.")
+    info_header = struct.pack('BHHHH', (FIN+ACK), 0, 0, 0, 0)
+    mysocket.sendto(info_header, client_address)
     print("Closing server socket.")
     mysocket.close()
     pass

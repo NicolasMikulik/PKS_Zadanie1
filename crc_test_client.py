@@ -82,14 +82,18 @@ def inverse_crc(data):
 s = socket.socket()
 
 import time, multiprocessing
-def keepalive(socket_info):
+def keepalive(socket_info, process):
     mysocket = socket_info[0]
     server_address = socket_info[1]
     while True:
         time.sleep(2.5)
         print("\nStatement", server_address)
         mysocket.sendto("Client: Maintaining session".encode(), ('localhost', 8484))
-        print(mysocket.recvfrom(1024)[0].decode(),"\n")
+        data = mysocket.recvfrom(1024)[0].decode()
+        print( data ,"\n")
+        if data[0] == "S":
+            print("Hello")
+            process.terminate()
 
 
 try:
@@ -102,7 +106,7 @@ except socket.error:
 server_address = ('localhost', 8484)
 # Send data to server 'Hello world'
 info = (mysocket, server_address)
-readfile = open('/home/nicolas/PycharmProjects/pks_zadanie1/romeo_copy.txt', 'rb');
+readfile = open('/home/nicolas/PycharmProjects/pks_zadanie1/romeo_copy19.txt', 'rb')
 data = readfile.read()
 crc = binascii.crc32(data)
 send_data = (binascii.crc32(data[:-15]))
@@ -110,9 +114,11 @@ print(binascii.crc32(data), type(crc), send_data, type(send_data))
 print(crc == send_data)
 no_received_reply = 1
 p = multiprocessing.Process(target=keepalive, args=(info,))
+p = multiprocessing.Process(target=keepalive, args=(info, p))
 p.start()
 while no_received_reply:
     answer = input("End?[y/n]")
+    print(p.is_alive())
     if answer == "y":
         p.terminate()
         print("Process was terminated")
@@ -128,4 +134,5 @@ while no_received_reply:
         print("Server did not respond in time")
         no_received_reply = 1'''
 # close the connection
+print(p.is_alive())
 s.close()
