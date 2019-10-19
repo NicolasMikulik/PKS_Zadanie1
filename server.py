@@ -1,7 +1,9 @@
 import binascii
 import math
+import multiprocessing
 import socket
 import struct
+import time
 
 
 # Zdroj funkcii xor(a, b), mod2div(divident, divisor) a decode_data(data, key) pre CRC:
@@ -24,6 +26,15 @@ REQ = 64
 KAL = 128
 UDP_HEAD = 8
 IP_HEAD = 20
+
+
+def keepalive(socket_info):
+    mysocket = socket_info[0]
+    server_address = socket_info[1]
+    while True:
+        time.sleep(5.0)
+        kal_header = struct.pack('BHHHH',KAL,0,0,0,0)
+        mysocket.sendto(kal_header, server_address)
 
 
 def send_msg(socket, server_IP, server_port):
@@ -232,8 +243,12 @@ def receive_msg(mysocket, frag_size, client_address):
         frag_index = 0
         message = ""
         if sending:
+            info = (mysocket, client_address)
+            p = multiprocessing.Process(target=keepalive, args=(info,))
+            p.start()
             while (len(message) < 3):
                 message = input("Message to be sent [type 'exit' to stop]: ")
+            p.terminate()
             if message == "exit":
                 info_header = struct.pack('BHHHH', (MSG + FIN), 0, 0, 0, 0)
                 mysocket.sendto(info_header, client_address)

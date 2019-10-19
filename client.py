@@ -258,8 +258,23 @@ def send_msg(mysocket, server_IP, server_port):
                 received_list = list()
                 corrupted_list = list()
                 while receiving:
-                    data_stream = mysocket.recvfrom(frag_size + header_size + UDP_HEAD)
-                    data = data_stream[0]  # addr = data_stream[1]
+                    while True:
+                        try:
+                            mysocket.settimeout(7.0)
+                            data_stream = mysocket.recvfrom(frag_size + header_size + UDP_HEAD)
+                            data = data_stream[0]
+                            kal, length, count, index, crc = struct.unpack('BHHHH', data[:header_size])
+                            if kal == KAL:
+                                print("Client is typing.")
+                                continue
+                            if kal != KAL:
+                                print("Client is sending a message.")
+                            mysocket.settimeout(None)
+                            break
+                        except socket.timeout:
+                            print("Waiting for message from client.")
+                    '''data_stream = mysocket.recvfrom(frag_size + header_size + UDP_HEAD)
+                    data = data_stream[0]  # addr = data_stream[1]'''
                     header = data[:header_size]
                     received_list.append(b'')  # received_file += data[header_size:]
                     (msg_type, data_length, frag_count, frag_index, crc) = struct.unpack('BHHHH', header)
