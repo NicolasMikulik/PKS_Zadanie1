@@ -89,14 +89,8 @@ def receive_fil(mysocket, frag_size, client_address):
         header = data[:struct_header_size]
         received_list.append(b'')  # received_file += data[struct_header_size:]
         (msg_type, data_length, frag_count, frag_index, crc) = struct.unpack('BHHHH', header)
-        '''crcstr = "{0:b}".format(crc)
-        if len(crcstr) < (len(key) - 1):
-            crcstr = '0' * ((len(key) - 1) - len(crcstr)) + crcstr
-        data_as_string = bin(int(binascii.hexlify(data[struct_header_size:]), 16))
-        data_as_string = data_as_string[2:] + crcstr
-        crccheck = decode_data(data_as_string, key)
-        temp = "0" * (len(key) - 1)'''
-        crc_check = binascii.crc_hqx(data[struct_header_size:],0)
+
+        crc_check = binascii.crc_hqx(data[struct_header_size:])
         if crc_check == crc:
             print("Datagram nr. " + str(frag_index) + ": correct crc")
             reply_header = struct.pack('BHHHH', (FIL+ACK), 1, 1, frag_index, 0)
@@ -136,14 +130,7 @@ def receive_fil(mysocket, frag_size, client_address):
             header = data[:struct_header_size]
             (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
                                                                                                                header)
-            '''crcstr = "{0:b}".format(reply_crc)
-            if len(crcstr) < (len(key) - 1):
-                crcstr = '0' * ((len(key) - 1) - len(crcstr)) + crcstr
-            data_as_string = bin(int(binascii.hexlify(data[struct_header_size:]), 16))
-            data_as_string = data_as_string[2:] + crcstr
-            crccheck = decode_data(data_as_string, key)
-            temp = "0" * (len(key) - 1)'''
-            crc_check = binascii.crc_hqx(data[struct_header_size:],0)
+            crc_check = binascii.crc_hqx(data[struct_header_size:])
             if crc_check == reply_crc:
                 print("Received requested datagram nr.", reply_frag_index, "from client, correct CRC")
                 received_list[reply_frag_index] = data[struct_header_size:]
