@@ -12,7 +12,7 @@ import struct
 # https://stackoverflow.com/questions/40325616/sending-file-over-udp-divided-into-fragments?noredirect=1&lq=1
 # Kniznica pouzita pre crc16; polynom x^16+x^12+x^5+1, decimalna hodnota=69665, hexad. hodnota=11021
 # https://docs.python.org/3/library/binascii.html
-
+# Najmensia povolena velkost dat v 1 datagrame je 3B
 
 SYN = 1
 ACK = 2
@@ -57,7 +57,7 @@ def send_file(mysocket, server_IP, server_port):
         data.extend(contents[:frag_size])
         data_length = len(data)
         data_as_string = bin(int(binascii.hexlify(data), 16))
-        if frag_index % 7 != 0:
+        if frag_index != 7:
             crc = binascii.crc_hqx(data,0)
         else:
             data = data[2:]
