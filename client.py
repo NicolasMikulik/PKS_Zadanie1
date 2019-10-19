@@ -121,9 +121,12 @@ def send_file(mysocket, server_IP, server_port):
     if frag_size > (1500 - IP_HEAD - UDP_HEAD - header_size):
         frag_size = 1500 - IP_HEAD - UDP_HEAD - header_size
         print("Entered size of datagram was too large, size was set to the value of", frag_size, "bytes.")
+    if frag_size < 3:
+        frag_size = 3
+        print("Entered size of datagram was too small, size was set to the value of", frag_size, "bytes.")
     info_header = struct.pack('BHHHH', (FIL+SYN), frag_size, 0, 0, 0)
     mysocket.sendto(info_header, server_address)
-    print("Server was informed that about sending a file and about datagram size.")
+    print("Server was informed about sending a file and about datagram size.")
     server_reply = mysocket.recvfrom(header_size+UDP_HEAD)
     (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',server_reply[0])
     if reply_msg_type == (FIL + ACK) and reply_data_length == frag_size:
