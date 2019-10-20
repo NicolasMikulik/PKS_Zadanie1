@@ -425,7 +425,7 @@ def receive_fil(mysocket, frag_size, client_address):
 
 
 def send_msg(mysocket, server_IP, server_port):
-    server_address = ('127.0.0.1', 60500)
+    server_address = (server_IP, server_port)
     header_size = struct.calcsize('BHHHH')
     history = list()
     frag_size = int(input("Please enter maximum size of a datagram in bytes: "))
@@ -654,7 +654,6 @@ def send_msg(mysocket, server_IP, server_port):
     info = (mysocket, server_address)
     p = multiprocessing.Process(target=maintain_session_recv, args=(info,))
     p.start()
-    client_termination = False
     while True:
         if p.is_alive() == False:
             print("Keepalive session not present anymore.")
@@ -662,22 +661,19 @@ def send_msg(mysocket, server_IP, server_port):
         if answer == "1":
             print(history, "\n")
         if answer == "2":
-            if (p.is_alive() == True):
-                client_termination = True
             p.terminate()  # print("Process was terminated")
             info_header = struct.pack('BHHHH', FIN, 0, 0, 0, 0)
             mysocket.sendto(info_header, server_address)
             break
-    if client_termination == True:
-        try:
-            mysocket.settimeout(25.0)
-            data_stream = mysocket.recvfrom(header_size + UDP_HEAD)
-            header = data_stream[0]
-            if struct.unpack('BHHHH', header) == ((REQ + FIN + ACK), 0, 0, 0, 0):
-                print("Server acknowledged that client terminated keepalive session.")
-            mysocket.settimeout(None)
-        except socket.timeout:
-            print("Server did not acknowledge that client terminated keepalive session.")
+    try:
+        mysocket.settimeout(5.0)
+        data_stream = mysocket.recvfrom(header_size + UDP_HEAD)
+        header = data_stream[0]
+        if struct.unpack('BHHHH', header) == ((FIN + ACK), 0, 0, 0, 0):
+            print("Server acknowledged that client terminated keepalive session.")
+        mysocket.settimeout(None)
+    except socket.timeout:
+        print("Server did not acknowledge that client terminated keepalive session.")
 
     print("Closing client socket")
     mysocket.close()
@@ -686,7 +682,7 @@ def send_msg(mysocket, server_IP, server_port):
 
 def send_file(mysocket, server_IP, server_port):
     print("Client chose to send a file, informing server. Waiting for server's reply...")
-    server_address = ('127.0.0.1', 60500)
+    server_address = (server_IP, server_port)
     header_size = struct.calcsize('BHHHH')
     info_header = struct.pack('BHHHH', (REQ + FIL + SYN), 0, 0, 0, 0)
     mysocket.sendto(info_header, server_address)
@@ -807,7 +803,6 @@ def send_file(mysocket, server_IP, server_port):
     info = (mysocket, server_address)
     p = multiprocessing.Process(target=maintain_session_recv, args=(info,))
     p.start()
-    client_termination = False
     while True:
         if p.is_alive() == False:
             print("Keepalive session not present anymore.")
@@ -815,22 +810,19 @@ def send_file(mysocket, server_IP, server_port):
         if answer == "1":
             print(transfer_info)
         if answer == "2":
-            if (p.is_alive() == True):
-                client_termination = True
             p.terminate()  # print("Process was terminated")
             info_header = struct.pack('BHHHH', FIN, 0, 0, 0, 0)
             mysocket.sendto(info_header, server_address)
             break
-    if client_termination == True:
-        try:
-            mysocket.settimeout(25.0)
-            data_stream = mysocket.recvfrom(header_size + UDP_HEAD)
-            header = data_stream[0]
-            if struct.unpack('BHHHH', header) == ((REQ + FIN + ACK), 0, 0, 0, 0):
-                print("Server acknowledged that client terminated keepalive session.")
-            mysocket.settimeout(None)
-        except socket.timeout:
-            print("Server did not acknowledge that client terminated keepalive session.")
+    try:
+        mysocket.settimeout(5.0)
+        data_stream = mysocket.recvfrom(header_size + UDP_HEAD)
+        header = data_stream[0]
+        if struct.unpack('BHHHH', header) == ((FIN + ACK), 0, 0, 0, 0):
+            print("Server acknowledged that client terminated keepalive session.")
+        mysocket.settimeout(None)
+    except socket.timeout:
+        print("Server did not acknowledge that client terminated keepalive session.")
 
     print("Closing client socket")
     mysocket.close()
@@ -846,8 +838,11 @@ def become_client():
         print("Failed to create client socket")
         exit()
     server_IP = input("Please enter the destination IP address: ")
+    if len(server_IP) < 1:
+        server_IP = '127.0.0.1'
     server_port = input("Please enter the destination port: ")
-    server_port = 60500
+    if len(server_port) < 1:
+        server_port = 60599
     transfer = input("Do you wish to send text messages[1] or files[2]?")
     if transfer == "1":
         send_msg(mysocket, server_IP, server_port)
@@ -864,7 +859,7 @@ def become_server():
         exit()
     port = input("Please enter the number of port on which you want to be receiving data: ")
     if len(port) < 4:
-        port = 60500
+        port = 60599
     server_address = ('localhost', port)
     try:  # Bind the socket to the port
         mysocket.bind(server_address)
@@ -899,7 +894,7 @@ except socket.error:
     print("Failed to create socket")
     exit()
 read_file = "/home/nicolas/Documents/FIIT/PKS/3_Rel_Prez_UDP.pdf"
-server_address = ('localhost', 60500)
+server_address = ('localhost', 60599)
 address_size = sys.getsizeof(server_address)  # print(str(sys.getsizeof(server_address)))
 header_size = struct.calcsize('BHHHH')
 msg_type = 1
