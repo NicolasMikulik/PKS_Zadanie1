@@ -5,9 +5,7 @@ import socket
 import struct
 import time
 
-
-# Zdroj funkcii xor(a, b), mod2div(divident, divisor) a decode_data(data, key) pre CRC:
-# https://www.geeksforgeeks.org/cyclic-redundancy-check-python/
+# Zdroje prevzateho kodu:
 # Princip komunikacie servera a klienta:
 # https://www.binarytides.com/programming-udp-sockets-in-python/?fbclid=IwAR2-JPM5O9EhroW-5WsBSzu-53NFYfqN54WqKIA8WcrJEWKmmX8gZrBo-4Y
 # UDP s umiestnovanim datagramov do pola podla indexu datagramu:
