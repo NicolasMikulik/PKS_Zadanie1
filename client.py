@@ -133,6 +133,7 @@ def receive_msg(mysocket, frag_size, client_address):
             data = data_stream[0]  # addr = data_stream[1]'''
             header = data[:header_size]
             received_list.append(b'')  # received_file += data[header_size:]
+            received_list.append(b'')
             (msg_type, data_length, frag_count, frag_index, crc) = struct.unpack('BHHHH', header)
 
             if (msg_type, data_length, frag_count, frag_index, crc) == ((MSG + FIN), 0, 0, 0, 0):
@@ -154,7 +155,7 @@ def receive_msg(mysocket, frag_size, client_address):
                 corrupted_list.append(frag_index)
                 mysocket.sendto(reply_header, client_address)
             received_frag += 1
-            if received_frag == frag_count:
+            if received_frag == frag_count or (frag_index+1) == frag_count:
                 print("Index of last received datagram was equal to number of all datagrams.")
                 break
         if receiving == 1:
@@ -368,12 +369,17 @@ def receive_fil(mysocket, frag_size, client_address):
     received_list = list()
     corrupted_list = list()
     while True:
-        mysocket.settimeout(5.0)
-        data_stream = mysocket.recvfrom(frag_size + header_size + UDP_HEAD)
-        mysocket.settimeout(None)
+        try:
+            check = 0
+            mysocket.settimeout(5.0)
+            data_stream = mysocket.recvfrom(frag_size + header_size + UDP_HEAD)
+            mysocket.settimeout(None)
+        except socket.timeout:
+            check = 1
         data = data_stream[0]  # addr = data_stream[1]
         header = data[:header_size]
         received_list.append(b'')  # received_file += data[header_size:]
+        received_list.append(b'')
         (msg_type, data_length, frag_count, frag_index, crc) = struct.unpack('BHHHH', header)
 
         crc_check = binascii.crc_hqx(data[header_size:], 0)
@@ -388,7 +394,7 @@ def receive_fil(mysocket, frag_size, client_address):
             corrupted_list.append(frag_index)
             mysocket.sendto(reply_header, client_address)
         received_frag += 1
-        if received_frag == frag_count:
+        if received_frag == frag_count or (frag_index+1 == frag_count) or check == 1:
             print("Index of last received datagram was equal to number of all datagrams.")
             transfer_info += "\nNumber of datagrams: " + str(frag_count)
             break
@@ -534,6 +540,10 @@ def send_msg(mysocket, server_IP, server_port):
                 print("Message of size " + str(msg_size) + " is being sent in " + str(frag_count) + " datagrams")
                 corrupted_list = list()
                 while contents:
+                    if frag_index%2 == 0:
+                        contents = contents[frag_size:]
+                        frag_index += 1
+                        continue
                     data = bytearray()
                     if len(contents) - 2*frag_size < 0:
                         data.extend(contents)
@@ -767,6 +777,10 @@ def send_file(mysocket, server_IP, server_port):
     print("File of size " + str(file_size) + " is being sent in " + str(frag_count) + " datagrams")
     corrupted_list = list()
     while contents:
+        if frag_index%2 == 0:
+            contents = contents[frag_size:]
+            frag_index += 1
+            continue
         data = bytearray()
         data.extend(contents[:frag_size])
         data_length = len(data)
