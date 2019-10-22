@@ -5,7 +5,7 @@ import socket
 import struct
 import time
 
-#  Zdroje prevzateho kodu:
+# Zdroje prevzateho kodu:
 # Princip komunikacie servera a klienta:
 # https://www.binarytides.com/programming-udp-sockets-in-python/?fbclid=IwAR2-JPM5O9EhroW-5WsBSzu-53NFYfqN54WqKIA8WcrJEWKmmX8gZrBo-4Y
 # UDP s umiestnovanim datagramov do pola podla indexu datagramu:
@@ -83,7 +83,7 @@ def maintain_session_recv(socket_info):
                 print("Server is maintaining the session")
             if kal == FIN or kal == (FIN + ACK):
                 print("Server is closing the session, client acknowledges.")
-                info_header = struct.pack('BHHHH', (FIN + ACK), 0, 0, 0, 0)
+                info_header = struct.pack('BHHHH', (FIN+ACK), 0, 0, 0, 0)
                 mysocket.sendto(info_header, server_address)
                 send_p.terminate()
                 mysocket.settimeout(None)
@@ -116,7 +116,6 @@ def receive_msg(mysocket, frag_size, client_address):
         while receiving:
             while True:
                 try:
-                    check = 1
                     mysocket.settimeout(7.0)
                     data_stream = mysocket.recvfrom(frag_size + header_size + UDP_HEAD)
                     data = data_stream[0]
@@ -127,17 +126,13 @@ def receive_msg(mysocket, frag_size, client_address):
                     if kal != KAL:
                         print("Client is sending a message.")
                     mysocket.settimeout(None)
-                    check = 0
                     break
                 except socket.timeout:
-                    if check == 1:
-                        break
                     print("Waiting for message from client.")
             '''data_stream = mysocket.recvfrom(frag_size + header_size + UDP_HEAD)
             data = data_stream[0]  # addr = data_stream[1]'''
             header = data[:header_size]
             received_list.append(b'')  # received_file += data[header_size:]
-            received_list.append(b'')
             (msg_type, data_length, frag_count, frag_index, crc) = struct.unpack('BHHHH', header)
 
             if (msg_type, data_length, frag_count, frag_index, crc) == ((MSG + FIN), 0, 0, 0, 0):
@@ -159,7 +154,7 @@ def receive_msg(mysocket, frag_size, client_address):
                 corrupted_list.append(frag_index)
                 mysocket.sendto(reply_header, client_address)
             received_frag += 1
-            if received_frag == frag_count or (frag_index + 1) == frag_count or check == 1:
+            if received_frag == frag_count:
                 print("Index of last received datagram was equal to number of all datagrams.")
                 break
         if receiving == 1:
@@ -244,10 +239,6 @@ def receive_msg(mysocket, frag_size, client_address):
                 print("Message of size " + str(msg_size) + " is being sent in " + str(frag_count) + " datagrams")
                 corrupted_list = list()
                 while contents:
-                    if frag_index % 2 == 1:
-                        contents = contents[frag_size:]
-                        frag_index += 1
-                        continue
                     data = bytearray()
                     if len(contents) - 2 * frag_size < 0:
                         data.extend(contents)
@@ -255,12 +246,12 @@ def receive_msg(mysocket, frag_size, client_address):
                     else:
                         data.extend(contents[:frag_size])
                     data_length = len(data)
-                    # if frag_index != 2:
-                    crc = binascii.crc_hqx(data, 0)
-                    '''else:
+                    if frag_index != 2:
+                        crc = binascii.crc_hqx(data, 0)
+                    else:
                         data = data[2:]
                         print("Intentionally sending smaller datagram ", len(data))
-                        crc = binascii.crc_hqx(data[1:], 0)'''
+                        crc = binascii.crc_hqx(data[1:], 0)
                     header = struct.pack('BHHHH', MSG, data_length, frag_count, frag_index, crc)
                     mysocket.sendto(header + bytearray(data),
                                     client_address)  # print("Datagram sent, awaiting response from server...")
@@ -372,22 +363,17 @@ def receive_fil(mysocket, frag_size, client_address):
     info_header = struct.pack('BHHHH', (FIL + ACK), frag_size, 0, 0, 0)
     mysocket.sendto(info_header, client_address)
     received_file = bytearray()
-    transfer_info = "Path to the received file: " + write_path + "\nDatagram size: " + str(frag_size)
+    transfer_info = "Path to the received file: "+write_path+"\nDatagram size: "+str(frag_size)
     received_frag = 0
     received_list = list()
     corrupted_list = list()
     while True:
-        try:
-            check = 0
-            mysocket.settimeout(5.0)
-            data_stream = mysocket.recvfrom(frag_size + header_size + UDP_HEAD)
-            mysocket.settimeout(None)
-        except socket.timeout:
-            check = 1
+        mysocket.settimeout(5.0)
+        data_stream = mysocket.recvfrom(frag_size + header_size + UDP_HEAD)
+        mysocket.settimeout(None)
         data = data_stream[0]  # addr = data_stream[1]
         header = data[:header_size]
         received_list.append(b'')  # received_file += data[header_size:]
-        received_list.append(b'')
         (msg_type, data_length, frag_count, frag_index, crc) = struct.unpack('BHHHH', header)
 
         crc_check = binascii.crc_hqx(data[header_size:], 0)
@@ -402,7 +388,7 @@ def receive_fil(mysocket, frag_size, client_address):
             corrupted_list.append(frag_index)
             mysocket.sendto(reply_header, client_address)
         received_frag += 1
-        if received_frag == frag_count or (frag_index + 1 == frag_count) or check == 1:
+        if received_frag == frag_count:
             print("Index of last received datagram was equal to number of all datagrams.")
             transfer_info += "\nNumber of datagrams: " + str(frag_count)
             break
@@ -519,7 +505,7 @@ def send_msg(mysocket, server_IP, server_port):
             info = (mysocket, server_address)
             p = multiprocessing.Process(target=keepalive, args=(info,))
             p.start()
-            while (len(message) < 3):
+            while(len(message) < 3):
                 message = input("Message to be sent [type 'exit' to stop]: ")
             p.terminate()
             if message == "exit":
@@ -527,10 +513,9 @@ def send_msg(mysocket, server_IP, server_port):
                 mysocket.sendto(info_header, server_address)
                 print("Server was informed about finishing the sending of messages.")
                 server_reply = mysocket.recvfrom(header_size + UDP_HEAD)
-                (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack(
-                    'BHHHH',
-                    server_reply[0])
-                if (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index) == ((MSG + FIN), 1, 1, 1):
+                (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
+                                                                                                                   server_reply[0])
+                if (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index) == ((MSG+FIN), 1, 1, 1):
                     print("Server response: Confirming the end of messages.")
                 else:
                     print("Server does not confirm the end of messages.")
@@ -549,12 +534,8 @@ def send_msg(mysocket, server_IP, server_port):
                 print("Message of size " + str(msg_size) + " is being sent in " + str(frag_count) + " datagrams")
                 corrupted_list = list()
                 while contents:
-                    if frag_index % 2 == 0:
-                        contents = contents[frag_size:]
-                        frag_index += 1
-                        continue
                     data = bytearray()
-                    if len(contents) - 2 * frag_size < 0:
+                    if len(contents) - 2*frag_size < 0:
                         data.extend(contents)
                         contents = contents[frag_size:]
                     else:
@@ -571,9 +552,8 @@ def send_msg(mysocket, server_IP, server_port):
                                     server_address)  # print("Datagram sent, awaiting response from server...")
                     data_stream = mysocket.recvfrom(header_size + UDP_HEAD)  # receives only header
                     reply_data = data_stream[0]
-                    (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack(
-                        'BHHHH',
-                        reply_data)
+                    (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
+                                                                                                                       reply_data)
                     notification = "Server response: "
                     if reply_msg_type == (MSG + ACK):
                         notification += "datagram nr. " + str(reply_frag_index) + " arrived successfully."
@@ -591,23 +571,19 @@ def send_msg(mysocket, server_IP, server_port):
 
                 data_stream = mysocket.recvfrom(header_size + UDP_HEAD)
                 reply_data = data_stream[0]
-                (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack(
-                    'BHHHH',
-                    reply_data)
+                (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
+                                                                                                                   reply_data)
                 print(reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc)
-                if (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index) == (
-                (MSG + ACK + FIN), 0, 0, 0):
+                if (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index) == ((MSG + ACK + FIN), 0, 0, 0):
                     print("Server response: All datagrams received successfully")
-                if (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index) == (
-                (MSG + REJ + FIN), 1, 1, 1):
+                if (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index) == ((MSG + REJ + FIN), 1, 1, 1):
                     print("Server response: Corrupted datagrams detected, server is requesting them to be resent.")
                     while len(corrupted_list) > 0:
                         # mysocket.settimeout(3.0)
                         data_stream = mysocket.recvfrom(header_size + UDP_HEAD)
                         reply_data = data_stream[0]
-                        (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index,
-                         reply_crc) = struct.unpack('BHHHH',
-                                                    reply_data)
+                        (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
+                                                                                                                           reply_data)
                         print("Client: Resending requested datagram nr.", reply_frag_index)
                         item = 0
                         contents = read_contents[0:]
@@ -623,11 +599,9 @@ def send_msg(mysocket, server_IP, server_port):
 
                         data_stream = mysocket.recvfrom(header_size + UDP_HEAD)
                         con_data = data_stream[0]
-                        (con_msg_type, con_data_length, con_frag_count, con_frag_index, con_crc) = struct.unpack(
-                            'BHHHH', con_data)
+                        (con_msg_type, con_data_length, con_frag_count, con_frag_index, con_crc) = struct.unpack('BHHHH', con_data)
                         if (con_msg_type, con_data_length, con_frag_count, con_frag_index) == ((REQ + ACK), 1, 1, 1):
-                            print("Server response: RESENT datagram nr." + str(
-                                reply_frag_index) + " received successfully")
+                            print("Server response: RESENT datagram nr." + str(reply_frag_index) + " received successfully")
                             corrupted_list.remove(reply_frag_index)
                             if len(corrupted_list) == 0:
                                 break
@@ -722,9 +696,9 @@ def send_msg(mysocket, server_IP, server_port):
                         reply_header = struct.pack('BHHHH', (MSG + ACK + FIN), 0, 0, 0, 0)
                         mysocket.sendto(reply_header, server_address)
                     received_msg = b''.join(received_list)
-                    message_entry = "Server: " + b''.join(received_list).decode()
+                    message_entry = "Server: "+b''.join(received_list).decode()
                     history.append(message_entry)
-                    print("Server:", received_msg.decode())
+                    print("Server:",received_msg.decode())
                     receiving = 0
                     sending = 1
     print("Maintaining session...")
@@ -758,13 +732,12 @@ def send_msg(mysocket, server_IP, server_port):
 
 def send_file(mysocket, server_IP, server_port):
     print("Client chose to send a file, informing server. Waiting for server's reply...")
-    server_address = (server_IP, server_port)
+    server_address = (server_IP, int(server_port))
     header_size = struct.calcsize('BHHHH')
     info_header = struct.pack('BHHHH', (REQ + FIL + SYN), 0, 0, 0, 0)
     mysocket.sendto(info_header, server_address)
     server_reply = mysocket.recvfrom(header_size + UDP_HEAD)
-    (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
-                                                                                                       server_reply[0])
+    (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH', server_reply[0])
     if reply_msg_type == (REQ + FIL + SYN + ACK):
         print("Server response: Set up to receive file.")
     read_file = input("Please enter full file path: ")
@@ -777,12 +750,11 @@ def send_file(mysocket, server_IP, server_port):
     if frag_size < 3:
         frag_size = 3
         print("Entered size of datagram was too small, size was set to the value of", frag_size, "bytes.")
-    info_header = struct.pack('BHHHH', (FIL + SYN), frag_size, 0, 0, 0)
+    info_header = struct.pack('BHHHH', (FIL+SYN), frag_size, 0, 0, 0)
     mysocket.sendto(info_header, server_address)
     print("Server was informed about sending a file and about datagram size.")
-    server_reply = mysocket.recvfrom(header_size + UDP_HEAD)
-    (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
-                                                                                                       server_reply[0])
+    server_reply = mysocket.recvfrom(header_size+UDP_HEAD)
+    (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',server_reply[0])
     if reply_msg_type == (FIL + ACK) and reply_data_length == frag_size:
         print("Server response: Prepared...")
     frag_index = 0
@@ -791,29 +763,23 @@ def send_file(mysocket, server_IP, server_port):
     read_contents = contents[0:]
     file_size = len(contents)
     frag_count = math.ceil(file_size / int(frag_size))
-    transfer_info = "\nFile sent: " + read_file + "\nDatagram size: " + str(
-        frag_size) + "\nNumber of datagrams: " + str(frag_count)
+    transfer_info = "\nFile sent: "+read_file+"\nDatagram size: "+str(frag_size)+"\nNumber of datagrams: "+str(frag_count)
     print("File of size " + str(file_size) + " is being sent in " + str(frag_count) + " datagrams")
     corrupted_list = list()
     while contents:
-        if frag_index % 2 == 0:
-            contents = contents[frag_size:]
-            frag_index += 1
-            continue
         data = bytearray()
         data.extend(contents[:frag_size])
         data_length = len(data)
         data_as_string = bin(int(binascii.hexlify(data), 16))
         if frag_index != 7:
-            crc = binascii.crc_hqx(data, 0)
+            crc = binascii.crc_hqx(data,0)
         else:
             data = data[2:]
             print("Intentionally sending smaller datagram ", len(data))
-            crc = binascii.crc_hqx(data[1:], 0)
+            crc = binascii.crc_hqx(data[1:],0)
         header = struct.pack('BHHHH', FIL, data_length, frag_count, frag_index, crc)
-        mysocket.sendto(header + bytearray(data),
-                        server_address)  # print("Datagram sent, awaiting response from server...")
-        data_stream = mysocket.recvfrom(header_size + UDP_HEAD)  # receives only header
+        mysocket.sendto(header + bytearray(data), server_address)  # print("Datagram sent, awaiting response from server...")
+        data_stream = mysocket.recvfrom(header_size+UDP_HEAD)  # receives only header
         reply_data = data_stream[0]
         (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
                                                                                                            reply_data)
@@ -821,7 +787,7 @@ def send_file(mysocket, server_IP, server_port):
         if reply_msg_type == (FIL + ACK):
             notification += "datagram nr. " + str(reply_frag_index) + " arrived successfully."
         if reply_msg_type == (FIL + REJ):
-            print("---Server response: CORRUPTED datagram", str(reply_frag_index) + "---")
+            print("---Server response: CORRUPTED datagram", str(reply_frag_index)+"---")
             corrupted_list.append(reply_frag_index)
             notification += "datagram nr. " + str(
                 reply_frag_index) + " arrived corrupted and will be resent after delivery of other datagrams."
@@ -829,11 +795,11 @@ def send_file(mysocket, server_IP, server_port):
         contents = contents[frag_size:]
         frag_index += 1
     print("All datagrams sent, informing server...", corrupted_list)
-    transfer_info += "\nNumber of corrupted datagrams reported by server: " + str(len(corrupted_list))
-    info_header = struct.pack('BHHHH', FIL + ACK, 1, 1, 1, 0)
+    transfer_info += "\nNumber of corrupted datagrams reported by server: "+str(len(corrupted_list))
+    info_header = struct.pack('BHHHH', FIL+ACK, 1, 1, 1, 0)
     mysocket.sendto(info_header, server_address)
 
-    data_stream = mysocket.recvfrom(header_size + UDP_HEAD)
+    data_stream = mysocket.recvfrom(header_size+UDP_HEAD)
     reply_data = data_stream[0]
     (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
                                                                                                        reply_data)
@@ -844,7 +810,7 @@ def send_file(mysocket, server_IP, server_port):
         print("Server response: Corrupted datagrams detected, server is requesting them to be resent.")
         while len(corrupted_list) > 0:
             # mysocket.settimeout(3.0)
-            data_stream = mysocket.recvfrom(header_size + UDP_HEAD)
+            data_stream = mysocket.recvfrom(header_size+UDP_HEAD)
             reply_data = data_stream[0]
             (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
                                                                                                                reply_data)
@@ -861,15 +827,15 @@ def send_file(mysocket, server_IP, server_port):
             header = struct.pack('BHHHH', REQ, data_length, frag_count, reply_frag_index, crc)
             mysocket.sendto(header + bytearray(data), server_address)
 
-            data_stream = mysocket.recvfrom(header_size + UDP_HEAD)
+            data_stream = mysocket.recvfrom(header_size+UDP_HEAD)
             con_data = data_stream[0]
             (con_msg_type, con_data_length, con_frag_count, con_frag_index, con_crc) = struct.unpack('BHHHH', con_data)
-            if (con_msg_type, con_data_length, con_frag_count, con_frag_index) == ((REQ + ACK), 1, 1, 1):
+            if (con_msg_type, con_data_length, con_frag_count, con_frag_index) == ((REQ+ACK), 1, 1, 1):
                 print("Server response: RESENT datagram nr." + str(reply_frag_index) + " received successfully")
                 corrupted_list.remove(reply_frag_index)
                 if len(corrupted_list) == 0:
                     break
-            if con_msg_type == (REQ + REJ) and con_data_length == 0 and con_frag_count == 1:
+            if con_msg_type == (REQ+REJ) and con_data_length == 0 and con_frag_count == 1:
                 print("Server response: RESENT datagram nr." + str(reply_frag_index) + " corrupted again")
     print(len(corrupted_list), "corrupted datagrams on client side left")
     try:
@@ -923,8 +889,8 @@ def become_client():
     server_IP = input("Please enter the destination IP address: ")
     if len(server_IP) < 1:
         server_IP = '127.0.0.1'
-    server_port = int(input("Please enter the destination port: "))
-    if server_port < 1024:
+    server_port = input("Please enter the destination port: ")
+    if len(server_port) < 1:
         server_port = 60599
     transfer = input("Do you wish to send text messages[1] or files[2]?")
     if transfer == "1":
@@ -966,7 +932,7 @@ def become_server():
 
 while True:
     role = input("Do you wish to be a receiver?[Y/n] Type [exit] to close the application.")
-    if (role == "Y" or role == "y"):
+    if(role == "Y" or role == "y"):
         become_server()
     if (role == "n" or role == "N"):
         become_client()
