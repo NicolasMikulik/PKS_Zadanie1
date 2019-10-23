@@ -5,7 +5,8 @@ import socket
 import struct
 import time
 
-# Zdroje prevzateho kodu:
+
+# Zdroje prevzateho kodu
 # Princip komunikacie servera a klienta:
 # https://www.binarytides.com/programming-udp-sockets-in-python/?fbclid=IwAR2-JPM5O9EhroW-5WsBSzu-53NFYfqN54WqKIA8WcrJEWKmmX8gZrBo-4Y
 # UDP s umiestnovanim datagramov do pola podla indexu datagramu:
@@ -476,7 +477,7 @@ def receive_fil(mysocket, frag_size, client_address):
 
 
 def send_msg(mysocket, server_IP, server_port):
-    server_address = (server_IP, server_port)
+    server_address = (server_IP, int(server_port))
     header_size = struct.calcsize('BHHHH')
     history = list()
     frag_size = int(input("Please enter maximum size of a datagram in bytes: "))
@@ -889,8 +890,8 @@ def become_client():
     server_IP = input("Please enter the destination IP address: ")
     if len(server_IP) < 1:
         server_IP = '127.0.0.1'
-    server_port = input("Please enter the destination port: ")
-    if len(server_port) < 1:
+    server_port = int(input("Please enter the destination port: "))
+    if server_port < 1024:
         server_port = 60599
     transfer = input("Do you wish to send text messages[1] or files[2]?")
     if transfer == "1":
