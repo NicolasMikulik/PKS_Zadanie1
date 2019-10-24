@@ -6,7 +6,8 @@ import struct
 import time
 
 
-# Zdroje prevzateho kodu
+# Zdroj funkcii xor(a, b), mod2div(divident, divisor) a decode_data(data, key) pre CRC:
+# https://www.geeksforgeeks.org/cyclic-redundancy-check-python/
 # Princip komunikacie servera a klienta:
 # https://www.binarytides.com/programming-udp-sockets-in-python/?fbclid=IwAR2-JPM5O9EhroW-5WsBSzu-53NFYfqN54WqKIA8WcrJEWKmmX8gZrBo-4Y
 # UDP s umiestnovanim datagramov do pola podla indexu datagramu:
@@ -477,7 +478,7 @@ def receive_fil(mysocket, frag_size, client_address):
 
 
 def send_msg(mysocket, server_IP, server_port):
-    server_address = (server_IP, int(server_port))
+    server_address = (server_IP, server_port)
     header_size = struct.calcsize('BHHHH')
     history = list()
     frag_size = int(input("Please enter maximum size of a datagram in bytes: "))
@@ -733,7 +734,7 @@ def send_msg(mysocket, server_IP, server_port):
 
 def send_file(mysocket, server_IP, server_port):
     print("Client chose to send a file, informing server. Waiting for server's reply...")
-    server_address = (server_IP, int(server_port))
+    server_address = (server_IP, server_port)
     header_size = struct.calcsize('BHHHH')
     info_header = struct.pack('BHHHH', (REQ + FIL + SYN), 0, 0, 0, 0)
     mysocket.sendto(info_header, server_address)
@@ -771,7 +772,6 @@ def send_file(mysocket, server_IP, server_port):
         data = bytearray()
         data.extend(contents[:frag_size])
         data_length = len(data)
-        data_as_string = bin(int(binascii.hexlify(data), 16))
         if frag_index != 7:
             crc = binascii.crc_hqx(data,0)
         else:
@@ -780,7 +780,14 @@ def send_file(mysocket, server_IP, server_port):
             crc = binascii.crc_hqx(data[1:],0)
         header = struct.pack('BHHHH', FIL, data_length, frag_count, frag_index, crc)
         mysocket.sendto(header + bytearray(data), server_address)  # print("Datagram sent, awaiting response from server...")
-        data_stream = mysocket.recvfrom(header_size+UDP_HEAD)  # receives only header
+        try:
+            mysocket.settimeout(1.0)
+            data_stream = mysocket.recvfrom(header_size + UDP_HEAD)  # receives only header
+            mysocket.settimeout(None)
+        except:
+            if len(data_stream) < 1:
+                data_stream = mysocket.recvfrom(header_size+UDP_HEAD)  # receives only header
+        mysocket.settimeout(None)
         reply_data = data_stream[0]
         (reply_msg_type, reply_data_length, reply_frag_count, reply_frag_index, reply_crc) = struct.unpack('BHHHH',
                                                                                                            reply_data)
