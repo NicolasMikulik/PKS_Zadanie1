@@ -379,16 +379,22 @@ def receive_fil(mysocket, frag_size, client_address):
         (msg_type, data_length, frag_count, frag_index, crc) = struct.unpack('BHHHH', header)
 
         crc_check = binascii.crc_hqx(data[header_size:], 0)
-        if crc_check == crc:
-            print("Datagram nr. " + str(frag_index) + ": correct crc")
-            reply_header = struct.pack('BHHHH', (FIL + ACK), 1, 1, frag_index, 0)
-            mysocket.sendto(reply_header, client_address)
-            received_list[frag_index] = data[header_size:]
-        else:
+        if frag_index == 0:
             print("---Datagram nr. " + str(frag_index) + ": INCORRECT crc---")
             reply_header = struct.pack('BHHHH', (FIL + REJ), 0, 1, frag_index, 0)
             corrupted_list.append(frag_index)
             mysocket.sendto(reply_header, client_address)
+        else:
+            if crc_check == crc:
+                print("Datagram nr. " + str(frag_index) + ": correct crc")
+                reply_header = struct.pack('BHHHH', (FIL + ACK), 1, 1, frag_index, 0)
+                mysocket.sendto(reply_header, client_address)
+                received_list[frag_index] = data[header_size:]
+            else:
+                print("---Datagram nr. " + str(frag_index) + ": INCORRECT crc---")
+                reply_header = struct.pack('BHHHH', (FIL + REJ), 0, 1, frag_index, 0)
+                corrupted_list.append(frag_index)
+                mysocket.sendto(reply_header, client_address)
         received_frag += 1
         if received_frag == frag_count:
             print("Index of last received datagram was equal to number of all datagrams.")
@@ -398,10 +404,10 @@ def receive_fil(mysocket, frag_size, client_address):
     (msg_type, data_length, frag_count, frag_index, info_crc) = struct.unpack('BHHHH', data_stream[0])
     if ((FIL + ACK), 1, 1, 1) == (msg_type, data_length, frag_count, frag_index):
         print("Client confirmed it has sent all datagrams")
-    corr_received_file = b''.join(received_list)
+    '''corr_received_file = b''.join(received_list)
     corr_write_file = open('/home/nicolas/PycharmProjects/pks_zadanie1/romeo_corrupted.txt', 'wb')
     corr_write_file.write(corr_received_file)
-    corr_write_file.close()
+    corr_write_file.close()'''
     print("Number of corrupted datagrams ", len(corrupted_list), corrupted_list)
     transfer_info += "\nNumber of received corrupted datagrams: " + str(len(corrupted_list))
     if len(corrupted_list) != 0:
